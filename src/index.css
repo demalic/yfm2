@@ -2,12 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
-html, body {
+/* Base styles - full screen mobile */
+html, body, #root {
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
   touch-action: manipulation;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: fixed;
 }
 
 body {
@@ -285,14 +289,17 @@ input, textarea, select {
 /* Mobile bottom nav safe area */
 @media (max-width: 767px) {
   .main-content {
-    padding-bottom: 72px;
+    height: calc(100dvh - 120px);
+    overflow: hidden;
   }
 }
 
 /* Desktop sidebar */
 @media (min-width: 768px) {
   .main-content {
+    height: 100dvh;
     margin-left: 240px;
+    overflow: hidden;
   }
 
   .sidebar {
@@ -307,4 +314,22 @@ input, textarea, select {
   .bottom-nav {
     display: none;
   }
+}
+
+/* Map container full height */
+.map-container {
+  height: 100%;
+  width: 100%;
+}
+
+/* Mobile nav - show all tabs with scroll */
+.bottom-nav-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bottom-nav-scroll::-webkit-scrollbar {
+  display: none;
 }

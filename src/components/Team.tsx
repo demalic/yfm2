@@ -23,7 +23,7 @@ export function Team() {
     async function loadMembers() {
       try {
         const { data, error } = await supabase
-          .from('members')
+          .from('team')
           .select('*')
           .order('name');
 
@@ -71,7 +71,7 @@ export function Team() {
 
     try {
       const { data, error } = await supabase
-        .from('members')
+        .from('team')
         .insert({
           name: newMemberName.trim(),
           role: newMemberRole,
@@ -96,7 +96,7 @@ export function Team() {
 
     try {
       const { error } = await supabase
-        .from('members')
+        .from('team')
         .delete()
         .eq('id', memberId);
 

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../hooks/useToast';
-import { Settings as SettingsIcon, Palette, Trash2, Plus, X, DollarSign, Check } from 'lucide-react';
+import {
+  Palette, Trash2, Plus, X, DollarSign, Map, Image, Upload, Check
+} from 'lucide-react';
 import type { LeadStatus } from '../types';
 
 const COLOR_OPTIONS = [
@@ -17,21 +19,53 @@ const ICON_OPTIONS = [
   '✓', '✗', '!', '?', '→', '←', '↑', '↓', '★', '☆',
 ];
 
+type MapTheme = 'dark' | 'light' | 'satellite';
+
 export function Settings() {
   const { member, logout } = useAuth();
-  const { statuses, commissionRate, saveCommissionRate, addStatus, updateStatus, deleteStatus } = useSettings();
+  const { statuses, commissionRate, settings, saveCommissionRate, addStatus, updateStatus, deleteStatus, updateSettings } = useSettings();
   const { showToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeSection, setActiveSection] = useState<'statuses' | 'commission' | 'data'>('statuses');
+  const [activeSection, setActiveSection] = useState<'statuses' | 'commission' | 'map' | 'data'>('map');
   const [showAddStatus, setShowAddStatus] = useState(false);
   const [editingStatus, setEditingStatus] = useState<LeadStatus | null>(null);
   const [newStatusName, setNewStatusName] = useState('');
   const [newStatusColor, setNewStatusColor] = useState(COLOR_OPTIONS[0]);
   const [newStatusIcon, setNewStatusIcon] = useState(ICON_OPTIONS[0]);
+  const [mapTheme, setMapTheme] = useState<MapTheme>((settings?.mapTheme as MapTheme) || 'dark');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const handleSaveCommissionRate = () => {
     saveCommissionRate(commissionRate);
     showToast('Commission rate saved', 'success');
+  };
+
+  const handleMapThemeChange = async (theme: MapTheme) => {
+    setMapTheme(theme);
+    await updateSettings({ mapTheme: theme });
+    showToast('Map theme updated', 'success');
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showToast('Please upload an image file', 'error');
+      return;
+    }
+
+    // Convert to base64 for simplicity (in production, use Supabase storage)
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      setLogoUrl(base64);
+      await updateSettings({ logoUrl: base64 });
+      showToast('Logo uploaded', 'success');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddStatus = () => {
@@ -122,7 +156,6 @@ export function Settings() {
     if (!confirm('Delete orphaned leads? This removes leads whose import batch was deleted.')) return;
 
     try {
-      // Get all lead IDs with import_id
       const { data: leadsWithImport, error: leadsError } = await supabase
         .from('leads')
         .select('id, import_id')
@@ -130,7 +163,6 @@ export function Settings() {
 
       if (leadsError) throw leadsError;
 
-      // Get all import IDs
       const { data: imports, error: importsError } = await supabase
         .from('imports')
         .select('id');
@@ -170,6 +202,16 @@ export function Settings() {
         {/* Section Tabs */}
         <div className="flex gap-2 overflow-x-auto scroll-hide">
           <button
+            onClick={() => setActiveSection('map')}
+            className={`flex-shrink-0 py-2 px-4 rounded-xl text-sm font-medium transition-colors
+                      ${activeSection === 'map'
+                        ? 'bg-accent-cyan/20 text-accent-cyan'
+                        : 'bg-dark-card text-gray-400 hover:text-white'
+                      }`}
+          >
+            Map
+          </button>
+          <button
             onClick={() => setActiveSection('statuses')}
             className={`flex-shrink-0 py-2 px-4 rounded-xl text-sm font-medium transition-colors
                       ${activeSection === 'statuses'
@@ -204,6 +246,103 @@ export function Settings() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
+        {activeSection === 'map' && (
+          <div className="space-y-6">
+            {/* Map Theme */}
+            <div>
+              <h2 className="font-medium text-gray-400 mb-3 flex items-center gap-2">
+                <Map className="w-4 h-4" />
+                Map Theme
+              </h2>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => handleMapThemeChange('dark')}
+                  className={`rounded-xl p-4 border transition-all
+                            ${mapTheme === 'dark'
+                              ? 'border-accent-cyan bg-accent-cyan/10'
+                              : 'border-dark-border bg-dark-card hover:border-gray-600'
+                            }`}
+                >
+                  <div className="text-2xl mb-2">🌙</div>
+                  <p className="text-sm font-medium text-white">Dark</p>
+                </button>
+                <button
+                  onClick={() => handleMapThemeChange('light')}
+                  className={`rounded-xl p-4 border transition-all
+                            ${mapTheme === 'light'
+                              ? 'border-accent-cyan bg-accent-cyan/10'
+                              : 'border-dark-border bg-dark-card hover:border-gray-600'
+                            }`}
+                >
+                  <div className="text-2xl mb-2">☀️</div>
+                  <p className="text-sm font-medium text-white">Light</p>
+                </button>
+                <button
+                  onClick={() => handleMapThemeChange('satellite')}
+                  className={`rounded-xl p-4 border transition-all
+                            ${mapTheme === 'satellite'
+                              ? 'border-accent-cyan bg-accent-cyan/10'
+                              : 'border-dark-border bg-dark-card hover:border-gray-600'
+                            }`}
+                >
+                  <div className="text-2xl mb-2">🛰️</div>
+                  <p className="text-sm font-medium text-white">Satellite</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Logo Upload */}
+            <div>
+              <h2 className="font-medium text-gray-400 mb-3 flex items-center gap-2">
+                <Image className="w-4 h-4" />
+                Custom Logo
+              </h2>
+              <div className="bg-dark-card rounded-xl p-4 border border-dark-border">
+                {(logoUrl || settings?.logoUrl) ? (
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={logoUrl || settings?.logoUrl}
+                      alt="Logo"
+                      className="h-10 w-auto rounded"
+                    />
+                    <button
+                      onClick={() => {
+                        setLogoUrl(null);
+                        updateSettings({ logoUrl: undefined });
+                      }}
+                      className="text-sm text-red-400 hover:text-red-300"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2 py-3
+                               border border-dashed border-gray-600 rounded-xl
+                               text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Upload Logo</span>
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      Recommended: Square image, max 200KB
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeSection === 'statuses' && (
           <div>
             <div className="flex items-center justify-between mb-4">

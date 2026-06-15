@@ -20,12 +20,22 @@ interface CacheData {
   timestamp: number;
 }
 
+interface AppSettings {
+  statuses: LeadStatus[];
+  commissionRate: number;
+  mapTheme: 'dark' | 'light' | 'satellite';
+  logoUrl?: string;
+  autoAssignRep?: string;
+}
+
 interface SettingsContextType {
   statuses: LeadStatus[];
+  settings: AppSettings;
   commissionRate: number;
   isLoading: boolean;
   saveStatuses: (newStatuses: LeadStatus[]) => Promise<void>;
   saveCommissionRate: (rate: number) => void;
+  updateSettings: (updates: Partial<AppSettings>) => Promise<void>;
   getStatusById: (id: string) => LeadStatus;
   addStatus: (status: Omit<LeadStatus, 'id'>) => void;
   updateStatus: (id: string, updates: Partial<LeadStatus>) => void;
@@ -36,6 +46,11 @@ const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [statuses, setStatuses] = useState<LeadStatus[]>(DEFAULT_STATUSES);
+  const [settings, setSettings] = useState<AppSettings>({
+    statuses: DEFAULT_STATUSES,
+    commissionRate: 200,
+    mapTheme: 'dark',
+  });
   const [commissionRate, setCommissionRate] = useState(200);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -122,6 +137,27 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('yfm_commission_rate', rate.toString());
   }, []);
 
+  const updateSettings = useCallback(async (updates: Partial<AppSettings>) => {
+    setSettings(prev => ({ ...prev, ...updates }));
+    try {
+      // Save each setting to Supabase
+      for (const [key, value] of Object.entries(updates)) {
+        await supabase
+          .from('settings')
+          .upsert({
+            key,
+            value: value as Record<string, unknown>,
+            updated_at: new Date().toISOString(),
+          });
+      }
+      // Also save to localStorage
+      localStorage.setItem('yfm_settings', JSON.stringify({ ...settings, ...updates }));
+    } catch {
+      // Fallback to localStorage
+      localStorage.setItem('yfm_settings', JSON.stringify({ ...settings, ...updates }));
+    }
+  }, [settings]);
+
   const getStatusById = useCallback(
     (id: string) => {
       return statuses.find((s) => s.id === id) || statuses[0];
@@ -161,10 +197,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const value: SettingsContextType = {
     statuses,
+    settings,
     commissionRate,
     isLoading,
     saveStatuses,
     saveCommissionRate,
+    updateSettings,
     getStatusById,
     addStatus,
     updateStatus,

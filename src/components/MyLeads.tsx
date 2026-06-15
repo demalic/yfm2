@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useLeads } from '../hooks/useLeads';
 import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../hooks/useToast';
-import { Search, MapPin, Clock, ChevronRight, Filter, X } from 'lucide-react';
-import type { Lead } from '../types';
+import { supabase } from '../lib/supabase';
+import { Search, MapPin, Clock, ChevronRight, Filter, X, Users, ToggleLeft, ToggleRight } from 'lucide-react';
+import type { Lead, Member } from '../types';
 
 interface MyLeadsProps {
   onLeadClick?: (lead: Lead) => void;
@@ -13,12 +14,43 @@ interface MyLeadsProps {
 export function MyLeads({ onLeadClick }: MyLeadsProps) {
   const { member } = useAuth();
   const { leads, updateLead } = useLeads();
-  const { statuses, getStatusById } = useSettings();
+  const { statuses, getStatusById, settings, updateSettings } = useSettings();
   const { showToast } = useToast();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
   const [showStatusPicker, setShowStatusPicker] = useState<Lead | null>(null);
+  const [teamMembers, setTeamMembers] = useState<Member[]>([]);
+  const [autoAssignRep, setAutoAssignRep] = useState<string>(settings?.autoAssignRep || '');
+
+  // Load team members for admin
+  useEffect(() => {
+    if (member?.role !== 'admin') return;
+
+    async function loadTeam() {
+      try {
+        const { data, error } = await supabase
+          .from('team')
+          .select('*')
+          .order('name');
+
+        if (!error && data) {
+          setTeamMembers(data as Member[]);
+        }
+      } catch (err) {
+        console.error('Failed to load team:', err);
+      }
+    }
+
+    loadTeam();
+  }, [member?.role]);
+
+  // Load auto-assign setting
+  useEffect(() => {
+    if (settings?.autoAssignRep) {
+      setAutoAssignRep(settings.autoAssignRep);
+    }
+  }, [settings?.autoAssignRep]);
 
   const myLeads = useMemo(() => {
     if (!member) return [];
@@ -50,6 +82,12 @@ export function MyLeads({ onLeadClick }: MyLeadsProps) {
     }
   };
 
+  const handleAutoAssignChange = async (repName: string) => {
+    setAutoAssignRep(repName);
+    await updateSettings({ autoAssignRep: repName });
+    showToast(repName ? `Auto-assigning to ${repName}` : 'Auto-assign disabled', 'info');
+  };
+
   const toggleStatusFilter = (statusId: string) => {
     const newFilter = new Set(statusFilter);
     if (newFilter.has(statusId)) {
@@ -78,7 +116,31 @@ export function MyLeads({ onLeadClick }: MyLeadsProps) {
     <div className="h-full flex flex-col bg-dark-bg">
       {/* Header */}
       <div className="px-4 py-4 border-b border-dark-border">
-        <h1 className="text-xl font-bold text-white mb-3">My Leads</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-bold text-white">My Leads</h1>
+          <span className="text-sm text-gray-400">{filteredLeads.length} leads</span>
+        </div>
+
+        {/* Admin Auto-Assign Toggle */}
+        {member?.role === 'admin' && (
+          <div className="mb-3 bg-dark-card rounded-xl p-3 border border-dark-border">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-300">Auto-assign new leads</span>
+            </div>
+            <select
+              value={autoAssignRep}
+              onChange={(e) => handleAutoAssignChange(e.target.value)}
+              className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2
+                       text-white focus:outline-none focus:border-accent-cyan"
+            >
+              <option value="">Leave unassigned</option>
+              {teamMembers.map((tm) => (
+                <option key={tm.id} value={tm.name}>{tm.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative">

@@ -26,10 +26,11 @@ export function Territory() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [polygonPoints, setPolygonPoints] = useState<L.LatLng[]>([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
 
   useEffect(() => {
     async function loadMembers() {
-      const { data } = await supabase.from('members').select('*').order('name');
+      const { data } = await supabase.from('team').select('*').order('name');
       if (data) setMembers(data as Member[]);
     }
     loadMembers();
@@ -63,6 +64,7 @@ export function Territory() {
               iconSize: [32, 32],
               iconAnchor: [16, 32],
             }),
+            // @ts-expect-error - custom property
             data: lead,
           });
 
@@ -109,6 +111,7 @@ export function Territory() {
           iconSize: [32, 32],
           iconAnchor: [16, 32],
         }),
+        // @ts-expect-error - custom property
         data: lead,
       });
 
@@ -177,6 +180,7 @@ export function Territory() {
   const handleFinishDrawing = () => {
     setIsDrawing(false);
     setSelectedLeads([...pointsInPolygon]);
+    setShowAssignModal(true);
   };
 
   const handleCancelDrawing = () => {
@@ -187,6 +191,18 @@ export function Territory() {
     }
     drawPointsRef.current = [];
     setPolygonPoints([]);
+  };
+
+  const handleCloseModal = () => {
+    setShowAssignModal(false);
+    setSelectedRep('');
+    if (drawnPolygonRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeLayer(drawnPolygonRef.current);
+      drawnPolygonRef.current = null;
+    }
+    drawPointsRef.current = [];
+    setPolygonPoints([]);
+    setSelectedLeads([]);
   };
 
   const handleAssign = async () => {
@@ -205,14 +221,7 @@ export function Territory() {
         repName
       );
       showToast(`Assigned ${selectedLeads.length} leads to ${repName}`, 'success');
-      setSelectedLeads([]);
-      if (drawnPolygonRef.current && mapInstanceRef.current) {
-        mapInstanceRef.current.removeLayer(drawnPolygonRef.current);
-        drawnPolygonRef.current = null;
-      }
-      drawPointsRef.current = [];
-      setPolygonPoints([]);
-      setSelectedRep('');
+      handleCloseModal();
     } catch (err) {
       showToast('Failed to assign leads', 'error');
     }
@@ -261,53 +270,6 @@ export function Territory() {
       <div className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full" style={{ touchAction: 'auto' }} />
 
-        {/* Selection Info Overlay */}
-        {selectedLeads.length > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 glass">
-            <div className="bg-dark-card rounded-2xl p-4 border border-dark-border">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-white font-medium">
-                  {selectedLeads.length} leads selected
-                </p>
-                <button
-                  onClick={() => setSelectedLeads([])}
-                  className="text-gray-400 hover:text-white"
-                >
-                  Clear
-                </button>
-              </div>
-
-              <div className="flex gap-2">
-                <select
-                  value={selectedRep}
-                  onChange={(e) => setSelectedRep(e.target.value)}
-                  className="flex-1 bg-dark-bg border border-dark-border rounded-xl px-3 py-2
-                           text-white focus:outline-none focus:border-accent-cyan"
-                >
-                  <option value="">Select Rep</option>
-                  {members
-                    .filter((m) => m.role !== 'admin')
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                </select>
-
-                <button
-                  onClick={handleAssign}
-                  disabled={!selectedRep}
-                  className="bg-accent-cyan text-dark-bg font-semibold px-4 py-2 rounded-xl
-                           hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Assign
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Drawing Instructions */}
         {isDrawing && (
           <div className="absolute top-4 left-4 right-4 pointer-events-none">
@@ -317,6 +279,64 @@ export function Territory() {
           </div>
         )}
       </div>
+
+      {/* Assign Modal */}
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center">
+          <div className="w-full max-w-md bg-dark-card rounded-t-3xl border-t border-dark-border bottom-sheet">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-dark-border">
+              <div>
+                <h3 className="font-semibold text-white">Assign Territory</h3>
+                <p className="text-sm text-gray-400">{selectedLeads.length} leads selected</p>
+              </div>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 hover:bg-dark-hover rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-xs text-gray-500 block mb-2">Assign to Rep</label>
+                <select
+                  value={selectedRep}
+                  onChange={(e) => setSelectedRep(e.target.value)}
+                  className="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-3
+                           text-white focus:outline-none focus:border-accent-cyan"
+                >
+                  <option value="">Select a rep...</option>
+                  {members
+                    .filter((m) => m.role !== 'admin')
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <button
+                onClick={handleAssign}
+                disabled={!selectedRep}
+                className="w-full bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
+                         hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Assign {selectedLeads.length} Leads
+              </button>
+
+              <button
+                onClick={handleCloseModal}
+                className="w-full text-gray-400 hover:text-white py-2"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

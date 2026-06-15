@@ -18,7 +18,7 @@ export function Login() {
     async function loadMembers() {
       try {
         const { data, error } = await supabase
-          .from('members')
+          .from('team')
           .select('*')
           .order('name');
 

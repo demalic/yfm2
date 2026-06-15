@@ -7,82 +7,94 @@ import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../hooks/useToast';
 import { supabase } from '../lib/supabase';
 import type { Lead } from '../types';
-
-// Fix for default marker icon
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-const defaultIcon = L.icon({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41],
-});
-
-L.Marker.prototype.options.icon = defaultIcon;
+import { Locate, Compass, MapPin, Filter, X, Trash2 } from 'lucide-react';
 
 interface LeadMapProps {
   onPinClick?: (lead: Lead) => void;
   statusFilter?: Set<string>;
-  center?: { lat: number; lng: number };
+  onStatusFilterChange?: (filter: Set<string>) => void;
 }
 
-export function LeadMap({ onPinClick, statusFilter, center }: LeadMapProps) {
+type LocationMode = 'off' | 'following' | 'heading';
+
+type MapTheme = 'dark' | 'light' | 'satellite';
+
+export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: LeadMapProps) {
   const { member } = useAuth();
-  const { leads, leadsWithLatLng, addLead } = useLeads();
-  const { getStatusById, statuses } = useSettings();
+  const { leadsWithLatLng, addLead, updateLead, deleteLead } = useLeads();
+  const { getStatusById, statuses, settings, updateSettings } = useSettings();
   const { showToast } = useToast();
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.MarkerClusterGroup | null>(null);
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
+  const userAccuracyRef = useRef<L.Circle | null>(null);
   const tempMarkerRef = useRef<L.Marker | null>(null);
   const longPressTimeoutRef = useRef<number | null>(null);
-  const longPressCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
-  const [showSatellite, setShowSatellite] = useState(false);
-  const [showStatusPopup, setShowStatusPopup] = useState<Lead | null>(null);
-  const [notes, setNotes] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [locationMode, setLocationMode] = useState<LocationMode>('off');
   const [isDroppingPin, setIsDroppingPin] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [editNotes, setEditNotes] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
+  const [localStatusFilter, setLocalStatusFilter] = useState<Set<string>>(statusFilter || new Set());
+  const [mapTheme, setMapTheme] = useState<MapTheme>('dark');
+
+  const mapThemeRef = useRef<MapTheme>('dark');
+  const locationModeRef = useRef<LocationMode>('off');
+  const headingRef = useRef<number>(0);
+
+  // Keep refs in sync
+  useEffect(() => { mapThemeRef.current = mapTheme; }, [mapTheme]);
+  useEffect(() => { locationModeRef.current = locationMode; }, [locationMode]);
+
+  // Load map theme from settings
+  useEffect(() => {
+    if (settings?.mapTheme) {
+      setMapTheme(settings.mapTheme as MapTheme);
+    }
+  }, [settings?.mapTheme]);
 
   // Initialize map
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Wait for two paint cycles
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (mapInstanceRef.current) return;
+        if (!mapRef.current || mapInstanceRef.current) return;
 
-        const map = L.map(mapRef.current!, {
-          zoomControl: true,
+        const map = L.map(mapRef.current, {
+          zoomControl: false,
           attributionControl: false,
         }).setView([37.5, -77.6], 11);
 
-        // Add tile layer
-        const cartoDB = L.tileLayer(
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Add tile layers
+        const darkLayer = L.tileLayer(
           'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
           { maxZoom: 19 }
         );
-        const esri = L.tileLayer(
+        const lightLayer = L.tileLayer(
+          'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          { maxZoom: 19 }
+        );
+        const satelliteLayer = L.tileLayer(
           'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
           { maxZoom: 19 }
         );
 
-        cartoDB.addTo(map);
+        darkLayer.addTo(map);
 
-        // Store layers for toggling
-        (map as L.Map & { cartoDB: L.TileLayer; esri: L.TileLayer }).cartoDB = cartoDB;
-        (map as L.Map & { cartoDB: L.TileLayer; esri: L.TileLayer }).esri = esri;
+        // Store layers
+        (map as L.Map & { dark: L.TileLayer; light: L.TileLayer; satellite: L.TileLayer }).dark = darkLayer;
+        (map as L.Map & { dark: L.TileLayer; light: L.TileLayer; satellite: L.TileLayer }).light = lightLayer;
+        (map as L.Map & { dark: L.TileLayer; light: L.TileLayer; satellite: L.TileLayer }).satellite = satelliteLayer;
 
-        // Add marker cluster group
+        // Marker cluster
         const markers = L.markerClusterGroup({
           maxClusterRadius: 50,
           spiderfyOnMaxZoom: true,
@@ -105,102 +117,135 @@ export function LeadMap({ onPinClick, statusFilter, center }: LeadMapProps) {
         markersLayerRef.current = markers;
 
         mapInstanceRef.current = map;
-
-        // Set up long-press for dropping pins
-        let pressStart = false;
-        let rippleEl: HTMLDivElement | null = null;
-
-        const handleTouchStart = (e: TouchEvent) => {
-          if (e.touches.length !== 1) return;
-          pressStart = true;
-
-          const touch = e.touches[0];
-          const point = map.containerPointToLatLng([touch.clientX - mapRef.current!.getBoundingClientRect().left,
-                                                     touch.clientY - mapRef.current!.getBoundingClientRect().top]);
-
-          longPressCenterRef.current = { lat: point.lat, lng: point.lng };
-
-          // Create ripple
-          rippleEl = document.createElement('div');
-          rippleEl.className = 'pin-drop-ripple';
-          rippleEl.style.left = `${touch.clientX - 20}px`;
-          rippleEl.style.top = `${touch.clientY - 20}px`;
-          document.body.appendChild(rippleEl);
-
-          // Vibrate if supported
-          if (navigator.vibrate) {
-            navigator.vibrate(50);
-          }
-
-          longPressTimeoutRef.current = window.setTimeout(() => {
-            if (pressStart && longPressCenterRef.current) {
-              dropPinAt(longPressCenterRef.current.lat, longPressCenterRef.current.lng);
-            }
-            pressStart = false;
-            if (rippleEl) {
-              rippleEl.remove();
-              rippleEl = null;
-            }
-          }, 600);
-        };
-
-        const handleTouchEnd = () => {
-          pressStart = false;
-          if (longPressTimeoutRef.current) {
-            clearTimeout(longPressTimeoutRef.current);
-            longPressTimeoutRef.current = null;
-          }
-          if (rippleEl) {
-            rippleEl.remove();
-            rippleEl = null;
-          }
-        };
-
-        const handleTouchMove = () => {
-          // Cancel long-press if moving
-          pressStart = false;
-          if (longPressTimeoutRef.current) {
-            clearTimeout(longPressTimeoutRef.current);
-            longPressTimeoutRef.current = null;
-          }
-          if (rippleEl) {
-            rippleEl.remove();
-            rippleEl = null;
-          }
-        };
-
-        mapRef.current?.addEventListener('touchstart', handleTouchStart, { passive: true });
-        mapRef.current?.addEventListener('touchend', handleTouchEnd, { passive: true });
-        mapRef.current?.addEventListener('touchmove', handleTouchMove, { passive: true });
       });
     });
 
     return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handler for map clicks when in drop pin mode
+  // Update tile layer when theme changes
   useEffect(() => {
     if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current as L.Map & { dark: L.TileLayer; light: L.TileLayer; satellite: L.TileLayer };
 
-    const map = mapInstanceRef.current;
+    // Remove all tile layers
+    map.eachLayer((layer) => {
+      if (layer instanceof L.TileLayer) {
+        map.removeLayer(layer);
+      }
+    });
+
+    // Add correct layer
+    switch (mapTheme) {
+      case 'dark':
+        map.dark.addTo(map);
+        break;
+      case 'light':
+        map.light.addTo(map);
+        break;
+      case 'satellite':
+        map.satellite.addTo(map);
+        break;
+    }
+
+    // Update leaflet container background
+    if (mapRef.current) {
+      const container = mapRef.current.querySelector('.leaflet-container') as HTMLElement;
+      if (container) {
+        container.style.background = mapTheme === 'light' ? '#f5f5f5' : '#0d0f14';
+      }
+    }
+  }, [mapTheme]);
+
+  // Long press gesture
+  useEffect(() => {
+    if (!mapInstanceRef.current || !mapRef.current) return;
+
+    let pressStartTime = 0;
+    let pressStartPos = { x: 0, y: 0 };
+    let isLongPress = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      pressStartTime = Date.now();
+      pressStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      isLongPress = false;
+
+      longPressTimeoutRef.current = window.setTimeout(() => {
+        isLongPress = true;
+
+        const map = mapInstanceRef.current;
+        if (!map || !mapRef.current) return;
+
+        const rect = mapRef.current.getBoundingClientRect();
+        const point = map.containerPointToLatLng([
+          pressStartPos.x - rect.left,
+          pressStartPos.y - rect.top
+        ]);
+
+        // Vibrate
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+
+        // Ripple animation
+        const ripple = document.createElement('div');
+        ripple.className = 'pin-drop-ripple';
+        ripple.style.left = `${pressStartPos.x - 20}px`;
+        ripple.style.top = `${pressStartPos.y - 20}px`;
+        document.body.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+
+        dropPinAt(point.lat, point.lng);
+      }, 600);
+    };
+
+    const handleTouchEnd = () => {
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = null;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!longPressTimeoutRef.current) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - pressStartPos.x;
+      const dy = touch.clientY - pressStartPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > 10) {
+        clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = null;
+      }
+    };
 
     const handleMapClick = (e: L.LeafletMouseEvent) => {
+      if (isLongPress) return;
       if (isDroppingPin) {
         dropPinAt(e.latlng.lat, e.latlng.lng);
         setIsDroppingPin(false);
       }
     };
 
-    map.on('click', handleMapClick);
+    mapRef.current.addEventListener('touchstart', handleTouchStart, { passive: true });
+    mapRef.current.addEventListener('touchend', handleTouchEnd, { passive: true });
+    mapRef.current.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+    mapInstanceRef.current.on('click', handleMapClick);
 
     return () => {
-      map.off('click', handleMapClick);
+      mapRef.current?.removeEventListener('touchstart', handleTouchStart);
+      mapRef.current?.removeEventListener('touchend', handleTouchEnd);
+      mapRef.current?.removeEventListener('touchmove', handleTouchMove);
+      mapInstanceRef.current?.off('click', handleMapClick);
     };
   }, [isDroppingPin]);
 
@@ -211,20 +256,19 @@ export function LeadMap({ onPinClick, statusFilter, center }: LeadMapProps) {
     const markers = markersLayerRef.current;
     markers.clearLayers();
 
-    const filteredLeads = statusFilter && statusFilter.size > 0
-      ? leadsWithLatLng.filter(lead => statusFilter.has(lead.status))
+    const filterToUse = localStatusFilter.size > 0 ? localStatusFilter : statusFilter;
+    const filteredLeads = filterToUse && filterToUse.size > 0
+      ? leadsWithLatLng.filter(lead => filterToUse.has(lead.status))
       : leadsWithLatLng;
 
     filteredLeads.forEach((lead) => {
       if (lead.lat === null || lead.lng === null) return;
 
       const status = getStatusById(lead.status);
-      const latitude = lead.lat;
-      const longitude = lead.lng;
 
-      const marker = L.marker([latitude, longitude], {
+      const marker = L.marker([lead.lat, lead.lng], {
         icon: L.divIcon({
-          html: `<div class="lead-marker" style="background-color: ${status.color}">${status.icon}</div>`,
+          html: `<div class="lead-marker" style="background-color: ${status?.color || '#6b7280'}">${status?.icon || '📍'}</div>`,
           className: 'custom-led-marker',
           iconSize: [32, 32],
           iconAnchor: [16, 32],
@@ -233,128 +277,152 @@ export function LeadMap({ onPinClick, statusFilter, center }: LeadMapProps) {
       });
 
       marker.on('click', () => {
-        // Pan to center first
-        mapInstanceRef.current?.panTo([latitude, longitude], { animate: true, duration: 0.3 });
-        // Show popup after pan
+        mapInstanceRef.current?.panTo([lead.lat!, lead.lng!], { animate: true, duration: 0.3 });
         setTimeout(() => {
-          setShowStatusPopup(lead);
-          setNotes(lead.notes || '');
-          setSelectedStatus(lead.status);
-        }, 400);
+          setSelectedLead(lead);
+          setEditNotes(lead.notes || '');
+          setEditStatus(lead.status);
+        }, 350);
       });
 
       markers.addLayer(marker);
     });
-  }, [leadsWithLatLng, statusFilter, getStatusById]);
+  }, [leadsWithLatLng, localStatusFilter, statusFilter, getStatusById]);
 
-  // Toggle satellite view
-  useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    const map = mapInstanceRef.current as L.Map & { cartoDB: L.TileLayer; esri: L.TileLayer };
-
-    if (showSatellite) {
-      map.cartoDB.removeFrom(map);
-      map.esri.addTo(map);
-    } else {
-      map.esri.removeFrom(map);
-      map.cartoDB.addTo(map);
-    }
-  }, [showSatellite]);
-
-  // User location
+  // User location tracking
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
-    let watchId: number;
-
-    const success = (pos: GeolocationPosition) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-
-      if (!userMarkerRef.current) {
-        userMarkerRef.current = L.circleMarker([lat, lng], {
-          radius: 8,
-          fillColor: '#3b82f6',
-          fillOpacity: 0.9,
-          color: '#60a5fa',
-          weight: 3,
-          opacity: 0.8,
-        }).addTo(mapInstanceRef.current!);
-
-        // First fix - pan to location
-        mapInstanceRef.current?.panTo([lat, lng], { animate: true, duration: 0.5 });
-      } else {
-        userMarkerRef.current.setLatLng([lat, lng]);
+    if (locationMode === 'off') {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
       }
-
-      // Add pulsing effect
-      const pulse = L.circleMarker([lat, lng], {
-        radius: 16,
-        fillColor: '#3b82f6',
-        fillOpacity: 0.3,
-        color: '#3b82f6',
-        weight: 1,
-        opacity: 0.5,
-      }).addTo(mapInstanceRef.current!);
-
-      setTimeout(() => pulse.remove(), 1000);
-    };
-
-    const error = (err: GeolocationPositionError) => {
-      console.log('Geolocation error:', err.message);
-    };
-
-    watchId = navigator.geolocation.watchPosition(success, error, {
-      enableHighAccuracy: true,
-      maximumAge: 10000,
-      timeout: 10000,
-    });
-
-    return () => {
-      navigator.geolocation.clearWatch(watchId);
       if (userMarkerRef.current) {
         userMarkerRef.current.remove();
         userMarkerRef.current = null;
       }
-    };
-  }, []);
-
-  const dropPinAt = useCallback(async (lat: number, lng: number) => {
-    // Show temp marker immediately
-    if (tempMarkerRef.current) {
-      tempMarkerRef.current.remove();
+      if (userAccuracyRef.current) {
+        userAccuracyRef.current.remove();
+        userAccuracyRef.current = null;
+      }
+      return;
     }
 
+    const handlePosition = (pos: GeolocationPosition) => {
+      const { latitude, longitude, accuracy, heading } = pos.coords;
+      const map = mapInstanceRef.current;
+      if (!map) return;
+
+      // Create or update user marker
+      if (!userMarkerRef.current) {
+        // Blue dot
+        userMarkerRef.current = L.circleMarker([latitude, longitude], {
+          radius: 8,
+          fillColor: '#3b82f6',
+          fillOpacity: 1,
+          color: '#ffffff',
+          weight: 3,
+          opacity: 1,
+        }).addTo(map);
+
+        // Accuracy circle
+        userAccuracyRef.current = L.circle([latitude, longitude], {
+          radius: accuracy,
+          fillColor: '#3b82f6',
+          fillOpacity: 0.15,
+          color: '#3b82f6',
+          weight: 0,
+        }).addTo(map);
+
+        // First time - center on user
+        if (locationModeRef.current !== 'off') {
+          map.panTo([latitude, longitude], { animate: true, duration: 0.5 });
+        }
+      } else {
+        userMarkerRef.current.setLatLng([latitude, longitude]);
+        if (userAccuracyRef.current) {
+          userAccuracyRef.current.setLatLng([latitude, longitude]);
+          userAccuracyRef.current.setRadius(accuracy);
+        }
+      }
+
+      // Heading tracking
+      if (locationMode === 'heading' && heading !== null && !isNaN(heading)) {
+        headingRef.current = heading;
+        map.setView([latitude, longitude], map.getZoom(), {
+          animate: false,
+        });
+        // @ts-expect-disable - rotate is a plugin method
+        if (map.setBearing) {
+          // @ts-expect-disable
+          map.setBearing(-heading);
+        }
+      } else if (locationMode === 'following') {
+        map.panTo([latitude, longitude], { animate: true, duration: 0.3 });
+      }
+    };
+
+    const handleError = (err: GeolocationPositionError) => {
+      console.error('Geolocation error:', err.message);
+      showToast('Location access denied', 'error');
+      setLocationMode('off');
+    };
+
+    watchIdRef.current = navigator.geolocation.watchPosition(handlePosition, handleError, {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 10000,
+    });
+
+    return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [locationMode, showToast]);
+
+  // Drop pin function
+  const dropPinAt = useCallback(async (lat: number, lng: number) => {
+    if (!mapInstanceRef.current) return;
+
+    // Remove any existing temp marker
+    if (tempMarkerRef.current) {
+      tempMarkerRef.current.remove();
+      tempMarkerRef.current = null;
+    }
+
+    // Show temp marker
     tempMarkerRef.current = L.marker([lat, lng], {
       icon: L.divIcon({
-        html: `<div class="lead-marker loading">📍</div>`,
+        html: `<div class="lead-marker loading" style="background-color: #06b6d4">📍</div>`,
         className: 'custom-led-marker',
         iconSize: [32, 32],
         iconAnchor: [16, 32],
       }),
-    }).addTo(mapInstanceRef.current!);
+    }).addTo(mapInstanceRef.current);
 
-    // Pan to new pin
-    mapInstanceRef.current?.panTo([lat, lng], { animate: true, duration: 0.3 });
+    mapInstanceRef.current.panTo([lat, lng], { animate: true, duration: 0.3 });
 
     // Reverse geocode
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        { headers: { 'User-Agent': 'YFM-Sales-App' } }
       );
       const data = await res.json();
 
-      const address = data.address;
+      const address = data.address || {};
       const street = address.house_number
-        ? `${address.house_number} ${address.road}`
+        ? `${address.house_number} ${address.road || ''}`
         : address.road || 'Unknown Address';
       const city = address.city || address.town || address.village || 'Unknown City';
       const state = address.state || 'VA';
       const zip = address.postcode || '';
 
-      // Save to Supabase
-      const newLead = await addLead({
-        rep: member?.name || 'Unknown',
+      await addLead({
+        rep: member?.name || 'Unassigned',
         street,
         city,
         state,
@@ -378,53 +446,88 @@ export function LeadMap({ onPinClick, statusFilter, center }: LeadMapProps) {
         tempMarkerRef.current.remove();
         tempMarkerRef.current = null;
       }
-      showToast('Failed to geocode location', 'error');
+      showToast('Failed to add pin', 'error');
     }
   }, [addLead, member?.name, showToast]);
 
-  const handleSaveStatus = async () => {
-    if (!showStatusPopup) return;
-
-    try {
-      const { error } = await supabase
-        .from('leads')
-        .update({
-          status: selectedStatus,
-          notes,
-        })
-        .eq('id', showStatusPopup.id);
-
-      if (error) throw error;
-
-      // Update local leads
-      showStatusPopup.status = selectedStatus;
-      showStatusPopup.notes = notes;
-
-      setShowStatusPopup(null);
-      showToast('Lead updated', 'success');
-    } catch (err) {
-      console.error('Update error:', err);
-      showToast('Failed to update lead', 'error');
+  // Location button click handler
+  const handleLocationClick = () => {
+    if (locationMode === 'off') {
+      setLocationMode('following');
+    } else if (locationMode === 'following') {
+      setLocationMode('heading');
+    } else {
+      setLocationMode('off');
+      // Reset north-up orientation
+      if (mapInstanceRef.current) {
+        // @ts-expect-disable
+        if (mapInstanceRef.current.setBearing) {
+          // @ts-expect-disable
+          mapInstanceRef.current.setBearing(0);
+        }
+      }
     }
   };
 
-  const handleDeletePin = async () => {
-    if (!showStatusPopup) return;
+  // Compass click - reset to north-up
+  const handleCompassClick = () => {
+    if (mapInstanceRef.current) {
+      // @ts-expect-disable
+      if (mapInstanceRef.current.setBearing) {
+        // @ts-expect-disable
+        mapInstanceRef.current.setBearing(0);
+      }
+      if (locationMode === 'heading') {
+        setLocationMode('following');
+      }
+    }
+  };
+
+  // Status filter toggle
+  const toggleStatusFilter = (statusId: string) => {
+    const newFilter = new Set(localStatusFilter);
+    if (newFilter.has(statusId)) {
+      newFilter.delete(statusId);
+    } else {
+      newFilter.add(statusId);
+    }
+    setLocalStatusFilter(newFilter);
+    onStatusFilterChange?.(newFilter);
+  };
+
+  // Save lead changes
+  const handleSaveLead = async () => {
+    if (!selectedLead) return;
 
     try {
-      const { error } = await supabase
-        .from('leads')
-        .delete()
-        .eq('id', showStatusPopup.id);
-
-      if (error) throw error;
-
-      setShowStatusPopup(null);
-      showToast('Pin deleted', 'success');
+      await updateLead(selectedLead.id, {
+        status: editStatus,
+        notes: editNotes,
+      });
+      setSelectedLead(null);
+      showToast('Lead updated', 'success');
     } catch (err) {
-      console.error('Delete error:', err);
-      showToast('Failed to delete pin', 'error');
+      showToast('Failed to update', 'error');
     }
+  };
+
+  // Delete lead
+  const handleDeleteLead = async () => {
+    if (!selectedLead) return;
+
+    try {
+      await deleteLead(selectedLead.id);
+      setSelectedLead(null);
+      showToast('Lead deleted', 'success');
+    } catch (err) {
+      showToast('Failed to delete', 'error');
+    }
+  };
+
+  // Change map theme
+  const handleThemeChange = (theme: MapTheme) => {
+    setMapTheme(theme);
+    updateSettings({ mapTheme: theme }).catch(console.error);
   };
 
   return (
@@ -432,83 +535,167 @@ export function LeadMap({ onPinClick, statusFilter, center }: LeadMapProps) {
       {/* Map Container */}
       <div
         ref={mapRef}
-        className="w-full h-full"
+        className="w-full h-full map-container"
         style={{ touchAction: 'auto' }}
       />
 
-      {/* Map Controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2">
+      {/* Top Left Controls */}
+      <div className="absolute top-2 left-2 flex flex-col gap-2 z-[1000]">
+        {/* Location Button */}
         <button
-          onClick={() => setShowSatellite(!showSatellite)}
-          className="bg-dark-card/90 backdrop-blur-sm border border-dark-border rounded-xl p-3
-                   hover:bg-dark-hover transition-colors"
-          title="Toggle satellite view"
+          onClick={handleLocationClick}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors
+                    ${locationMode !== 'off'
+                      ? 'bg-accent-cyan text-dark-bg'
+                      : 'bg-dark-card/95 text-white hover:bg-dark-hover'
+                    }`}
+          title={locationMode === 'off' ? 'Show location' : locationMode === 'following' ? 'Follow heading' : 'Turn off'}
         >
-          {showSatellite ? (
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 014 0 2 2 0 012-2v-1a2 2 0 012-2h-1.905M3.055 11A9.001 9.001 0 0111 3.055M3.055 11H19.945M11 3.055A9.001 9.001 0 0120.945 11H11m-8.945 0a9 9 0 0014.89 6.7" />
-            </svg>
-          )}
+          <Locate className="w-5 h-5" />
         </button>
 
+        {/* Compass Button */}
+        <button
+          onClick={handleCompassClick}
+          className="w-10 h-10 bg-dark-card/95 rounded-xl flex items-center justify-center shadow-lg
+                   text-white hover:bg-dark-hover transition-colors"
+          title="Reset to North"
+        >
+          <Compass className="w-5 h-5" />
+        </button>
+
+        {/* Drop Pin Button */}
         <button
           onClick={() => setIsDroppingPin(!isDroppingPin)}
-          className={`bg-dark-card/90 backdrop-blur-sm border rounded-xl p-3
-                    hover:bg-dark-hover transition-colors
-                    ${isDroppingPin ? 'border-accent-cyan bg-accent-cyan/20' : 'border-dark-border'}`}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors
+                    ${isDroppingPin
+                      ? 'bg-accent-cyan text-dark-bg'
+                      : 'bg-dark-card/95 text-white hover:bg-dark-hover'
+                    }`}
           title="Drop a pin"
         >
-          <svg className={`w-5 h-5 ${isDroppingPin ? 'text-accent-cyan' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+          <MapPin className="w-5 h-5" />
         </button>
+
+        {/* Status Filter Button */}
+        <button
+          onClick={() => setShowStatusFilter(!showStatusFilter)}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors
+                    ${localStatusFilter.size > 0
+                      ? 'bg-accent-cyan text-dark-bg'
+                      : 'bg-dark-card/95 text-white hover:bg-dark-hover'
+                    }`}
+          title="Filter by status"
+        >
+          <Filter className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Top Right Controls - Theme */}
+      <div className="absolute top-2 right-2 flex flex-col gap-2 z-[1000]">
+        <div className="bg-dark-card/95 rounded-xl shadow-lg overflow-hidden flex">
+          <button
+            onClick={() => handleThemeChange('dark')}
+            className={`w-8 h-8 flex items-center justify-center transition-colors
+                      ${mapTheme === 'dark' ? 'bg-accent-cyan text-dark-bg' : 'text-white hover:bg-dark-hover'}`}
+            title="Dark theme"
+          >
+            🌙
+          </button>
+          <button
+            onClick={() => handleThemeChange('light')}
+            className={`w-8 h-8 flex items-center justify-center transition-colors
+                      ${mapTheme === 'light' ? 'bg-accent-cyan text-dark-bg' : 'text-white hover:bg-dark-hover'}`}
+            title="Light theme"
+          >
+            ☀️
+          </button>
+          <button
+            onClick={() => handleThemeChange('satellite')}
+            className={`w-8 h-8 flex items-center justify-center transition-colors
+                      ${mapTheme === 'satellite' ? 'bg-accent-cyan text-dark-bg' : 'text-white hover:bg-dark-hover'}`}
+            title="Satellite"
+          >
+            🛰️
+          </button>
+        </div>
       </div>
 
       {/* Drop Pin Mode Indicator */}
       {isDroppingPin && (
-        <div className="absolute top-4 left-4 right-16">
-          <div className="bg-accent-cyan/20 border border-accent-cyan rounded-xl px-4 py-2 text-sm text-white">
+        <div className="absolute top-2 left-14 right-14 z-[1000]">
+          <div className="bg-accent-cyan/90 text-dark-bg rounded-xl px-3 py-2 text-sm font-medium text-center backdrop-blur-sm">
             Tap on the map to drop a pin
           </div>
         </div>
       )}
 
+      {/* Status Filter Panel */}
+      {showStatusFilter && (
+        <div className="absolute top-16 left-2 bg-dark-card/95 backdrop-blur-md rounded-xl border border-dark-border p-3 z-[1000] min-w-[180px]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-white">Filter by Status</span>
+            <button onClick={() => setShowStatusFilter(false)} className="text-gray-400 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-1">
+            {statuses.map((status) => (
+              <button
+                key={status.id}
+                onClick={() => toggleStatusFilter(status.id)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
+                          ${localStatusFilter.has(status.id)
+                            ? 'bg-accent-cyan/20 text-white'
+                            : 'text-gray-300 hover:bg-dark-hover'
+                          }`}
+              >
+                <span>{status.icon}</span>
+                <span>{status.name}</span>
+              </button>
+            ))}
+            {localStatusFilter.size > 0 && (
+              <button
+                onClick={() => {
+                  setLocalStatusFilter(new Set());
+                  onStatusFilterChange?.(new Set());
+                }}
+                className="w-full text-center text-xs text-gray-400 hover:text-white py-1"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Lead Detail Popup */}
-      {showStatusPopup && (
-        <div className="absolute top-4 left-4 right-4 max-w-sm bg-dark-card/95 backdrop-blur-md border border-dark-border rounded-2xl overflow-hidden shadow-2xl">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
-            <h3 className="font-semibold text-white truncate pr-4">
-              {showStatusPopup.street}
-            </h3>
+      {selectedLead && (
+        <div className="absolute bottom-0 left-0 right-0 bg-dark-card/98 backdrop-blur-md rounded-t-2xl border-t border-dark-border z-[1000] max-h-[60vh] overflow-y-auto">
+          <div className="flex items-center justify-between p-4 border-b border-dark-border">
+            <div className="flex-1 min-w-0 pr-3">
+              <h3 className="font-semibold text-white truncate">{selectedLead.street}</h3>
+              <p className="text-sm text-gray-400">{selectedLead.city}, {selectedLead.state}</p>
+            </div>
             <button
-              onClick={() => setShowStatusPopup(null)}
-              className="p-1 hover:bg-dark-hover rounded-lg transition-colors"
+              onClick={() => setSelectedLead(null)}
+              className="p-2 hover:bg-dark-hover rounded-lg transition-colors shrink-0"
             >
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="w-5 h-5 text-gray-400" />
             </button>
           </div>
 
-          <div className="p-4 space-y-3">
-            <p className="text-sm text-gray-400">
-              {showStatusPopup.city}, {showStatusPopup.state}
-            </p>
-
+          <div className="p-4 space-y-4">
+            {/* Status Selector */}
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Status</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="text-xs text-gray-500 block mb-2">Status</label>
+              <div className="flex flex-wrap gap-2">
                 {statuses.map((status) => (
                   <button
                     key={status.id}
-                    onClick={() => setSelectedStatus(status.id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
-                              ${selectedStatus === status.id
+                    onClick={() => setEditStatus(status.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors
+                              ${editStatus === status.id
                                 ? 'bg-accent-cyan/20 border border-accent-cyan text-white'
                                 : 'bg-dark-bg border border-dark-border text-gray-300 hover:border-gray-600'
                               }`}
@@ -520,11 +707,12 @@ export function LeadMap({ onPinClick, statusFilter, center }: LeadMapProps) {
               </div>
             </div>
 
+            {/* Notes */}
             <div>
               <label className="text-xs text-gray-500 block mb-1">Notes</label>
               <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
                 rows={2}
                 placeholder="Add notes..."
                 className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2
@@ -533,25 +721,25 @@ export function LeadMap({ onPinClick, statusFilter, center }: LeadMapProps) {
               />
             </div>
 
+            {/* Rep */}
             <p className="text-xs text-gray-500">
-              Rep: {showStatusPopup.rep || 'Unassigned'}
+              Rep: <span className="text-white">{selectedLead.rep || 'Unassigned'}</span>
             </p>
 
-            <button
-              onClick={handleSaveStatus}
-              className="w-full bg-accent-cyan text-dark-bg font-semibold py-2.5 rounded-xl
-                       hover:bg-accent-cyan/90 active:scale-[0.98] transition-all"
-            >
-              Save
-            </button>
-
-            <div className="border-t border-dark-border pt-3">
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
               <button
-                onClick={handleDeletePin}
-                className="w-full text-red-400 hover:text-red-300 text-sm py-1
-                         hover:bg-red-500/10 rounded-lg transition-colors"
+                onClick={handleSaveLead}
+                className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-2.5 rounded-xl
+                         hover:bg-accent-cyan/90 active:scale-[0.98] transition-all"
               >
-                Delete pin
+                Save
+              </button>
+              <button
+                onClick={handleDeleteLead}
+                className="px-4 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
+              >
+                <Trash2 className="w-5 h-5" />
               </button>
             </div>
           </div>
