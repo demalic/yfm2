@@ -1,187 +1,132 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { MapPin, User, Lock, ArrowRight } from 'lucide-react';
+import { Lock, User, ArrowRight } from 'lucide-react';
 import type { Member } from '../types';
 
+// Hardcoded YFM logo as SVG for the login screen
+const YFM_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" fill="none">
+  <text x="50%" y="58" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif"
+    font-weight="900" font-size="56" fill="white" letter-spacing="-2">YFM</text>
+</svg>`;
+
 export function Login() {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
-  const [showPasswordScreen, setShowPasswordScreen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { showToast } = useToast();
 
-  useEffect(() => {
-    async function loadMembers() {
-      try {
-        const { data, error } = await supabase
-          .from('team')
-          .select('*')
-          .order('name');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-        if (!error && data) {
-          setMembers(data as Member[]);
-        }
-      } catch (err) {
-        console.error('Failed to load members:', err);
-        showToast('Failed to load team members', 'error');
+    if (!name.trim() || !password.trim()) {
+      showToast('Please enter your name and password', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('team')
+        .select('*')
+        .ilike('name', name.trim())
+        .single();
+
+      if (error || !data) {
+        showToast('Name not found', 'error');
+        setIsLoading(false);
+        return;
       }
-      setIsLoading(false);
-    }
 
-    loadMembers();
-  }, [showToast]);
+      const member = data as Member;
 
-  const handleSelectMember = (member: Member) => {
-    setSelectedMember(member);
-    if (member.role === 'admin') {
-      setShowPasswordScreen(true);
-    } else {
+      if (member.password !== password) {
+        showToast('Incorrect password', 'error');
+        setIsLoading(false);
+        return;
+      }
+
       login(member);
+    } catch (err) {
+      console.error('Login error:', err);
+      showToast('Login failed', 'error');
     }
+
+    setIsLoading(false);
   };
-
-  const handleSubmitPassword = () => {
-    if (!selectedMember) return;
-
-    if (password === 'yfmusa') {
-      login(selectedMember);
-      setShowPasswordScreen(false);
-      setPassword('');
-    } else {
-      showToast('Incorrect password', 'error');
-      // Recover pending member if lost
-      setPassword('');
-    }
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return '🔴';
-      case 'manager':
-        return '🔵';
-      default:
-        return '🟢';
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
-        <div className="animate-pulse text-accent-cyan text-lg">Loading...</div>
-      </div>
-    );
-  }
-
-  if (showPasswordScreen && selectedMember) {
-    return (
-      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-4">
-        <div className="w-full max-w-sm">
-          <button
-            onClick={() => {
-              setShowPasswordScreen(false);
-              setSelectedMember(null);
-            }}
-            className="text-sm text-gray-400 mb-4 hover:text-white transition-colors"
-          >
-            ← Back to team selection
-          </button>
-
-          <div className="bg-dark-card rounded-2xl p-6 border border-dark-border">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-accent-cyan/20 flex items-center justify-center">
-                <Lock className="w-6 h-6 text-accent-cyan" />
-              </div>
-              <div>
-                <h2 className="text-white font-semibold">
-                  {selectedMember.name}
-                </h2>
-                <p className="text-sm text-gray-400">Admin password required</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSubmitPassword();
-                }}
-                placeholder="Enter admin password"
-                className="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-3
-                         text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan
-                         text-base"
-                autoComplete="off"
-              />
-
-              <button
-                onClick={handleSubmitPassword}
-                className="w-full bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
-                         hover:bg-accent-cyan/90 active:scale-[0.98] transition-all"
-              >
-                Sign In
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-dark-bg flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent-cyan/20 mb-4">
-            <MapPin className="w-8 h-8 text-accent-cyan" />
+        <div className="text-center mb-10">
+          <img
+            src="/yfm-logo.png"
+            alt="YFM"
+            className="h-20 mx-auto mb-4 object-contain"
+            onError={(e) => {
+              const el = e.currentTarget;
+              el.style.display = 'none';
+              const fallback = el.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = 'block';
+            }}
+          />
+          <div style={{ display: 'none' }}>
+            <h1 className="text-6xl font-black text-white tracking-tight">YFM</h1>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">YFM</h1>
-          <p className="text-gray-400">Field Sales Platform</p>
+          <p className="text-gray-500 text-sm mt-2 tracking-widest uppercase">Field Sales Platform</p>
         </div>
 
-        {/* Member Selection */}
-        <div className="bg-dark-card rounded-2xl border border-dark-border overflow-hidden">
-          <div className="px-4 py-3 border-b border-dark-border">
-            <p className="text-sm text-gray-400">Select your name</p>
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative">
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              autoComplete="name"
+              className="w-full bg-[#111] border border-[#222] rounded-2xl pl-12 pr-4 py-4
+                       text-white placeholder-gray-600 focus:outline-none focus:border-accent-cyan
+                       text-base transition-colors"
+            />
           </div>
 
-          <div className="divide-y divide-dark-border">
-            {members.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                No team members found. Contact your admin.
-              </div>
+          <div className="relative">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              autoComplete="current-password"
+              className="w-full bg-[#111] border border-[#222] rounded-2xl pl-12 pr-4 py-4
+                       text-white placeholder-gray-600 focus:outline-none focus:border-accent-cyan
+                       text-base transition-colors"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-accent-cyan text-black font-bold py-4 rounded-2xl
+                     hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
+                     disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
             ) : (
-              members.map((member) => (
-                <button
-                  key={member.id}
-                  onClick={() => handleSelectMember(member)}
-                  className="w-full flex items-center gap-3 px-4 py-3
-                           hover:bg-dark-hover active:bg-dark-hover/50 transition-colors"
-                >
-                  <span className="text-lg">{getRoleIcon(member.role)}</span>
-                  <div className="flex-1 text-left">
-                    <p className="text-white font-medium">{member.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">
-                      {member.role}
-                    </p>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-gray-500" />
-                </button>
-              ))
+              <>
+                Sign In
+                <ArrowRight className="w-5 h-5" />
+              </>
             )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-gray-600 mt-6">
-          Tap your name to login
-        </p>
+          </button>
+        </form>
       </div>
     </div>
   );

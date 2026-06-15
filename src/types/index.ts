@@ -4,6 +4,7 @@ export interface Member {
   id: string;
   name: string;
   role: Role;
+  password?: string;
   created_at: string;
 }
 

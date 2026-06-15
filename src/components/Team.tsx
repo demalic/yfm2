@@ -17,6 +17,7 @@ export function Team() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<'rep' | 'manager'>('rep');
+  const [newMemberPassword, setNewMemberPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'team' | 'commission'>('team');
 
   useEffect(() => {
@@ -68,6 +69,10 @@ export function Team() {
       showToast('Please enter a name', 'error');
       return;
     }
+    if (!newMemberPassword.trim()) {
+      showToast('Please enter a password', 'error');
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -75,6 +80,7 @@ export function Team() {
         .insert({
           name: newMemberName.trim(),
           role: newMemberRole,
+          password: newMemberPassword.trim(),
         })
         .select()
         .single();
@@ -83,6 +89,8 @@ export function Team() {
 
       setMembers([...members, data as Member]);
       setNewMemberName('');
+      setNewMemberRole('rep');
+      setNewMemberPassword('');
       setShowAddMember(false);
       showToast('Team member added', 'success');
     } catch (err) {
@@ -318,6 +326,20 @@ export function Team() {
                     Manager
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Password</label>
+                <input
+                  type="password"
+                  value={newMemberPassword}
+                  onChange={(e) => setNewMemberPassword(e.target.value)}
+                  placeholder="Set a password"
+                  autoComplete="new-password"
+                  className="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-3
+                           text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan
+                           text-base"
+                />
               </div>
 
               <button

@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../hooks/useToast';
 import {
-  Palette, Trash2, Plus, X, DollarSign, Map, Image, Upload
+  Palette, Trash2, Plus, X, DollarSign, Map
 } from 'lucide-react';
 import type { LeadStatus } from '../types';
 import { StatusIconSvg, ICON_OPTIONS } from './StatusIcon';
@@ -22,7 +22,6 @@ export function Settings() {
   const { member, logout } = useAuth();
   const { statuses, commissionRate, settings, saveCommissionRate, addStatus, updateStatus, deleteStatus, updateSettings } = useSettings();
   const { showToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeSection, setActiveSection] = useState<'statuses' | 'commission' | 'map' | 'data'>('map');
   const [showAddStatus, setShowAddStatus] = useState(false);
@@ -31,7 +30,6 @@ export function Settings() {
   const [newStatusColor, setNewStatusColor] = useState(COLOR_OPTIONS[0]);
   const [newStatusIcon, setNewStatusIcon] = useState<IconKey>(ICON_OPTIONS[0].key);
   const [mapTheme, setMapTheme] = useState<MapTheme>((settings?.mapTheme as MapTheme) || 'dark');
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const handleSaveCommissionRate = () => {
     saveCommissionRate(commissionRate);
@@ -42,27 +40,6 @@ export function Settings() {
     setMapTheme(theme);
     await updateSettings({ mapTheme: theme });
     showToast('Map theme updated', 'success');
-  };
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      showToast('Please upload an image file', 'error');
-      return;
-    }
-
-    // Convert to base64 for simplicity (in production, use Supabase storage)
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      setLogoUrl(base64);
-      await updateSettings({ logoUrl: base64 });
-      showToast('Logo uploaded', 'success');
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleAddStatus = () => {
@@ -288,55 +265,6 @@ export function Settings() {
               </div>
             </div>
 
-            {/* Logo Upload */}
-            <div>
-              <h2 className="font-medium text-gray-400 mb-3 flex items-center gap-2">
-                <Image className="w-4 h-4" />
-                Custom Logo
-              </h2>
-              <div className="bg-dark-card rounded-xl p-4 border border-dark-border">
-                {(logoUrl || settings?.logoUrl) ? (
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={logoUrl || settings?.logoUrl}
-                      alt="Logo"
-                      className="h-10 w-auto rounded"
-                    />
-                    <button
-                      onClick={() => {
-                        setLogoUrl(null);
-                        updateSettings({ logoUrl: undefined });
-                      }}
-                      className="text-sm text-red-400 hover:text-red-300"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center justify-center gap-2 py-3
-                               border border-dashed border-gray-600 rounded-xl
-                               text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
-                    >
-                      <Upload className="w-4 h-4" />
-                      <span>Upload Logo</span>
-                    </button>
-                    <p className="text-xs text-gray-500 mt-2 text-center">
-                      Recommended: Square image, max 200KB
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         )}
 

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ToastProvider } from './hooks/useToast';
 import { Login } from './components/Login';
+import { SplashScreen } from './components/SplashScreen';
 import { LeadMap } from './components/LeadMap';
 import { MyLeads } from './components/MyLeads';
 import { MyStats } from './components/MyStats';
@@ -202,10 +203,14 @@ function AppContent() {
 }
 
 function App() {
+  const [splashDone, setSplashDone] = useState(false);
+  const handleSplashDone = useCallback(() => setSplashDone(true), []);
+
   return (
     <AuthProvider>
       <ToastProvider>
         <SettingsProvider>
+          {!splashDone && <SplashScreen onDone={handleSplashDone} />}
           <AppContent />
         </SettingsProvider>
       </ToastProvider>
