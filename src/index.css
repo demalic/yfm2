@@ -79,7 +79,25 @@ body {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
-.lead-marker.loading {
+/* New SVG-based circular pin */
+.lead-pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(255,255,255,0.25);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.lead-pin:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 0 2px rgba(255,255,255,0.4);
+}
+
+.lead-pin.loading {
   animation: pulse 1s infinite;
 }
 

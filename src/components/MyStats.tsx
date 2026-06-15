@@ -3,6 +3,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useLeads } from '../hooks/useLeads';
 import { useSettings } from '../hooks/useSettings';
 import { TrendingUp, DollarSign, Target, Award } from 'lucide-react';
+import { StatusIconSvg } from './StatusIcon';
+import type { IconKey } from './StatusIcon';
 
 export function MyStats() {
   const { member } = useAuth();
@@ -111,7 +113,9 @@ export function MyStats() {
 
               return (
                 <div key={status.id} className="flex items-center gap-3">
-                  <span className="text-lg">{status.icon}</span>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: status.color }}>
+                    <StatusIconSvg iconKey={status.icon as IconKey} className="w-3.5 h-3.5 text-white" />
+                  </div>
                   <div className="flex-1">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-400">{status.name}</span>

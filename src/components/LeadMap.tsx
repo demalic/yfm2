@@ -8,6 +8,8 @@ import { useToast } from '../hooks/useToast';
 import { supabase } from '../lib/supabase';
 import type { Lead } from '../types';
 import { Locate, Compass, MapPin, Filter, X, Trash2 } from 'lucide-react';
+import { StatusIconSvg, getIconSvgHtml } from './StatusIcon';
+import type { IconKey } from './StatusIcon';
 
 interface LeadMapProps {
   onPinClick?: (lead: Lead) => void;
@@ -266,12 +268,13 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
 
       const status = getStatusById(lead.status);
 
+      const iconHtml = getIconSvgHtml(status?.icon || 'dots', 'white', 14);
       const marker = L.marker([lead.lat, lead.lng], {
         icon: L.divIcon({
-          html: `<div class="lead-marker" style="background-color: ${status?.color || '#6b7280'}">${status?.icon || '📍'}</div>`,
+          html: `<div class="lead-pin" style="background-color: ${status?.color || '#6b7280'}">${iconHtml}</div>`,
           className: 'custom-led-marker',
-          iconSize: [32, 32],
-          iconAnchor: [16, 32],
+          iconSize: [30, 30],
+          iconAnchor: [15, 30],
           popupAnchor: [0, -32],
         }),
       });
@@ -394,12 +397,13 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
     }
 
     // Show temp marker
+    const pinIconHtml = getIconSvgHtml('dots', 'white', 14);
     tempMarkerRef.current = L.marker([lat, lng], {
       icon: L.divIcon({
-        html: `<div class="lead-marker loading" style="background-color: #06b6d4">📍</div>`,
+        html: `<div class="lead-pin loading" style="background-color: #06b6d4">${pinIconHtml}</div>`,
         className: 'custom-led-marker',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
       }),
     }).addTo(mapInstanceRef.current);
 
@@ -650,7 +654,9 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
                             : 'text-gray-300 hover:bg-dark-hover'
                           }`}
               >
-                <span>{status.icon}</span>
+                <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: status.color }}>
+                  <StatusIconSvg iconKey={status.icon as IconKey} className="w-3 h-3 text-white" />
+                </div>
                 <span>{status.name}</span>
               </button>
             ))}
@@ -700,7 +706,9 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
                                 : 'bg-dark-bg border border-dark-border text-gray-300 hover:border-gray-600'
                               }`}
                   >
-                    <span>{status.icon}</span>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: status.color }}>
+                      <StatusIconSvg iconKey={status.icon as IconKey} className="w-3 h-3 text-white" />
+                    </div>
                     <span>{status.name}</span>
                   </button>
                 ))}

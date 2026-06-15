@@ -6,6 +6,8 @@ import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../hooks/useToast';
 import { Upload, FileText, Trash2, Download, AlertCircle } from 'lucide-react';
 import type { ImportBatch, Lead } from '../types';
+import { StatusIconSvg } from './StatusIcon';
+import type { IconKey } from './StatusIcon';
 
 interface ParsedCSV {
   addresses: Array<{
@@ -373,7 +375,9 @@ export function Import() {
                                 : 'bg-dark-bg border border-dark-border text-gray-300 hover:border-gray-600'
                               }`}
                   >
-                    <span>{status.icon}</span>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: status.color }}>
+                      <StatusIconSvg iconKey={status.icon as IconKey} className="w-3 h-3 text-white" />
+                    </div>
                     <span>{status.name}</span>
                   </button>
                 ))}

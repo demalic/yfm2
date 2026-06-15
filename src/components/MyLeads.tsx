@@ -6,6 +6,8 @@ import { useToast } from '../hooks/useToast';
 import { supabase } from '../lib/supabase';
 import { Search, MapPin, Clock, ChevronRight, Filter, X, Users, ToggleLeft, ToggleRight } from 'lucide-react';
 import type { Lead, Member } from '../types';
+import { StatusIconSvg } from './StatusIcon';
+import type { IconKey } from './StatusIcon';
 
 interface MyLeadsProps {
   onLeadClick?: (lead: Lead) => void;
@@ -170,7 +172,9 @@ export function MyLeads({ onLeadClick }: MyLeadsProps) {
                             : 'bg-dark-card text-gray-400 border border-dark-border hover:border-gray-600'
                           }`}
               >
-                <span>{status.icon}</span>
+                <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: status.color }}>
+                  <StatusIconSvg iconKey={status.icon as IconKey} className="w-2.5 h-2.5 text-white" />
+                </div>
                 <span>{status.name}</span>
               </button>
             ))}
@@ -198,10 +202,10 @@ export function MyLeads({ onLeadClick }: MyLeadsProps) {
                 >
                   <div className="flex items-start gap-3">
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                      style={{ backgroundColor: status.color + '20' }}
+                      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: status.color }}
                     >
-                      {status.icon}
+                      <StatusIconSvg iconKey={status.icon as IconKey} className="w-4 h-4 text-white" />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -268,7 +272,9 @@ export function MyLeads({ onLeadClick }: MyLeadsProps) {
                                 : 'bg-dark-bg border border-dark-border text-gray-300 hover:border-gray-600'
                               }`}
                   >
-                    <span>{status.icon}</span>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: status.color }}>
+                      <StatusIconSvg iconKey={status.icon as IconKey} className="w-3 h-3 text-white" />
+                    </div>
                     <span>{status.name}</span>
                   </button>
                 ))}

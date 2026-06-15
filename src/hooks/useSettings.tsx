@@ -3,14 +3,14 @@ import { supabase } from '../lib/supabase';
 import type { LeadStatus } from '../types';
 
 const DEFAULT_STATUSES: LeadStatus[] = [
-  { id: 'new', name: 'New', color: '#ef4444', icon: '☠️' },
-  { id: 'not_home', name: 'Not Home', color: '#3b82f6', icon: '🏠' },
-  { id: 'sold', name: 'Sold', color: '#22c55e', icon: '💰' },
-  { id: 'ndm', name: 'NDM', color: '#6b7280', icon: '❓' },
-  { id: 'call_back', name: 'Call Back', color: '#06b6d4', icon: '📞' },
-  { id: 'pending', name: 'Pending', color: '#f59e0b', icon: '⏳' },
-  { id: 'untouched', name: 'Untouched', color: '#14b8a6', icon: '✅' },
-  { id: 'existing_customer', name: 'Existing Customer', color: '#a855f7', icon: '❗' },
+  { id: 'new', name: 'New', color: '#ef4444', icon: 'skull' },
+  { id: 'not_home', name: 'Not Home', color: '#3b82f6', icon: 'house' },
+  { id: 'sold', name: 'Sold', color: '#22c55e', icon: 'money-bag' },
+  { id: 'ndm', name: 'NDM', color: '#6b7280', icon: 'dots' },
+  { id: 'call_back', name: 'Call Back', color: '#eab308', icon: 'phone' },
+  { id: 'pending', name: 'Pending', color: '#4b5563', icon: 'hourglass' },
+  { id: 'untouched', name: 'Untouched', color: '#ec4899', icon: 'check' },
+  { id: 'existing_customer', name: 'Existing Customer', color: '#f97316', icon: 'exclamation' },
 ];
 
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes

@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast';
 import { supabase } from '../lib/supabase';
 import { Users, Check, X } from 'lucide-react';
 import type { Member, Lead } from '../types';
+import { getIconSvgHtml } from './StatusIcon';
 
 export function Territory() {
   const { member } = useAuth();
@@ -59,10 +60,10 @@ export function Territory() {
 
           const marker = L.marker([lead.lat, lead.lng], {
             icon: L.divIcon({
-              html: `<div class="lead-marker" style="background-color: ${status.color}">${status.icon}</div>`,
+              html: `<div class="lead-pin" style="background-color: ${status.color}">${getIconSvgHtml(status.icon, 'white', 14)}</div>`,
               className: 'custom-led-marker',
-              iconSize: [32, 32],
-              iconAnchor: [16, 32],
+              iconSize: [30, 30],
+              iconAnchor: [15, 30],
             }),
             // @ts-expect-error - custom property
             data: lead,
@@ -104,12 +105,14 @@ export function Territory() {
 
       const isSelected = selectedLeads.some((l) => l.id === lead.id);
 
+      const pinColor = isSelected ? '#06b6d4' : status.color;
+      const pinIcon = isSelected ? getIconSvgHtml('check', 'white', 14) : getIconSvgHtml(status.icon, 'white', 14);
       const marker = L.marker([lead.lat, lead.lng], {
         icon: L.divIcon({
-          html: `<div class="lead-marker ${isSelected ? 'selected' : ''}" style="background-color: ${isSelected ? '#06b6d4' : status.color}">${isSelected ? '✓' : status.icon}</div>`,
+          html: `<div class="lead-pin${isSelected ? ' ring-2 ring-white' : ''}" style="background-color: ${pinColor}">${pinIcon}</div>`,
           className: 'custom-led-marker',
-          iconSize: [32, 32],
-          iconAnchor: [16, 32],
+          iconSize: [30, 30],
+          iconAnchor: [15, 30],
         }),
         // @ts-expect-error - custom property
         data: lead,

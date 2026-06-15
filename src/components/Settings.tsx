@@ -4,19 +4,16 @@ import { useAuth } from '../hooks/useAuth';
 import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../hooks/useToast';
 import {
-  Palette, Trash2, Plus, X, DollarSign, Map, Image, Upload, Check
+  Palette, Trash2, Plus, X, DollarSign, Map, Image, Upload
 } from 'lucide-react';
 import type { LeadStatus } from '../types';
+import { StatusIconSvg, ICON_OPTIONS } from './StatusIcon';
+import type { IconKey } from './StatusIcon';
 
 const COLOR_OPTIONS = [
   '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
   '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#6366f1',
   '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#6b7280',
-];
-
-const ICON_OPTIONS = [
-  '💀', '🏠', '💰', '❓', '📞', '⏳', '✅', '❗', '🚪', '💬',
-  '✓', '✗', '!', '?', '→', '←', '↑', '↓', '★', '☆',
 ];
 
 type MapTheme = 'dark' | 'light' | 'satellite';
@@ -32,7 +29,7 @@ export function Settings() {
   const [editingStatus, setEditingStatus] = useState<LeadStatus | null>(null);
   const [newStatusName, setNewStatusName] = useState('');
   const [newStatusColor, setNewStatusColor] = useState(COLOR_OPTIONS[0]);
-  const [newStatusIcon, setNewStatusIcon] = useState(ICON_OPTIONS[0]);
+  const [newStatusIcon, setNewStatusIcon] = useState<IconKey>(ICON_OPTIONS[0].key);
   const [mapTheme, setMapTheme] = useState<MapTheme>((settings?.mapTheme as MapTheme) || 'dark');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -363,10 +360,10 @@ export function Settings() {
                   className="bg-dark-card rounded-xl p-4 border border-dark-border flex items-center gap-3"
                 >
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
-                    style={{ backgroundColor: status.color + '20' }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: status.color }}
                   >
-                    {status.icon}
+                    <StatusIconSvg iconKey={status.icon as IconKey} className="w-5 h-5 text-white" />
                   </div>
 
                   <div className="flex-1">
@@ -506,14 +503,19 @@ export function Settings() {
               <div>
                 <label className="text-xs text-gray-500 block mb-2">Icon</label>
                 <div className="flex flex-wrap gap-2">
-                  {ICON_OPTIONS.map((icon) => (
+                  {ICON_OPTIONS.map((opt) => (
                     <button
-                      key={icon}
-                      onClick={() => setNewStatusIcon(icon)}
-                      className={`w-10 h-10 rounded-lg bg-dark-bg text-xl transition-transform
-                                ${newStatusIcon === icon ? 'scale-110 ring-2 ring-accent-cyan' : ''}`}
+                      key={opt.key}
+                      onClick={() => setNewStatusIcon(opt.key)}
+                      title={opt.label}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all
+                                ${newStatusIcon === opt.key
+                                  ? 'ring-2 ring-accent-cyan scale-110'
+                                  : 'hover:scale-105'
+                                }`}
+                      style={{ backgroundColor: newStatusColor }}
                     >
-                      {icon}
+                      <StatusIconSvg iconKey={opt.key} className="w-5 h-5 text-white" />
                     </button>
                   ))}
                 </div>
@@ -572,14 +574,19 @@ export function Settings() {
               <div>
                 <label className="text-xs text-gray-500 block mb-2">Icon</label>
                 <div className="flex flex-wrap gap-2">
-                  {ICON_OPTIONS.map((icon) => (
+                  {ICON_OPTIONS.map((opt) => (
                     <button
-                      key={icon}
-                      onClick={() => setEditingStatus({ ...editingStatus, icon })}
-                      className={`w-10 h-10 rounded-lg bg-dark-bg text-xl transition-transform
-                                ${editingStatus.icon === icon ? 'scale-110 ring-2 ring-accent-cyan' : ''}`}
+                      key={opt.key}
+                      onClick={() => setEditingStatus({ ...editingStatus, icon: opt.key })}
+                      title={opt.label}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all
+                                ${editingStatus.icon === opt.key
+                                  ? 'ring-2 ring-accent-cyan scale-110'
+                                  : 'hover:scale-105'
+                                }`}
+                      style={{ backgroundColor: editingStatus.color }}
                     >
-                      {icon}
+                      <StatusIconSvg iconKey={opt.key as IconKey} className="w-5 h-5 text-white" />
                     </button>
                   ))}
                 </div>
