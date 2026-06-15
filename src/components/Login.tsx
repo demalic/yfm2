@@ -5,12 +5,6 @@ import { useToast } from '../hooks/useToast';
 import { Lock, User, ArrowRight } from 'lucide-react';
 import type { Member } from '../types';
 
-// Hardcoded YFM logo as SVG for the login screen
-const YFM_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" fill="none">
-  <text x="50%" y="58" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif"
-    font-weight="900" font-size="56" fill="white" letter-spacing="-2">YFM</text>
-</svg>`;
-
 export function Login() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -64,7 +58,7 @@ export function Login() {
         {/* Logo */}
         <div className="text-center mb-10">
           <img
-            src="/yfm-logo.png"
+            src="/yfm-logo.jpg"
             alt="YFM"
             className="h-20 mx-auto mb-4 object-contain"
             onError={(e) => {
