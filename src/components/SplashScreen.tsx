@@ -40,7 +40,7 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
         <img
           src="/yfm-logo.jpg"
           alt="YFM"
-          className="h-32 w-auto object-contain"
+          className="w-80 h-80 object-contain"
           onError={(e) => {
             const el = e.currentTarget;
             el.style.display = 'none';

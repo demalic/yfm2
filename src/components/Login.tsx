@@ -60,7 +60,7 @@ export function Login() {
           <img
             src="/yfm-logo.jpg"
             alt="YFM"
-            className="h-20 mx-auto mb-4 object-contain"
+            className="w-56 h-56 mx-auto mb-4 object-contain"
             onError={(e) => {
               const el = e.currentTarget;
               el.style.display = 'none';
