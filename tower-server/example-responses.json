@@ -1,0 +1,134 @@
+{
+  "startJobRequest_zip": {
+    "isp": "frontier",
+    "scope": "zip",
+    "zip": "46783"
+  },
+  "startJobRequest_state": {
+    "isp": "frontier",
+    "scope": "state",
+    "state": "IN"
+  },
+  "startJobResponse": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  "job_zipcheckRunning": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "isp": "frontier",
+    "scope": "zip",
+    "zip": "46783",
+    "state": "IN",
+    "status": "running",
+    "phase": "zipcheck",
+    "zipcheck": {
+      "status": "running",
+      "progress": 45,
+      "message": "Scanning OpenAddresses archive for zip 46783…",
+      "addressCount": null,
+      "outputCsv": null
+    },
+    "qualifier": {
+      "status": "idle",
+      "progress": 0,
+      "current": 0,
+      "total": 0,
+      "message": "Waiting for zip checker…",
+      "counts": {
+        "eligible": 0,
+        "notEligible": 0,
+        "existingCustomer": 0,
+        "futureFiber": 0,
+        "skipped": 0
+      }
+    },
+    "createdAt": "2026-06-16T20:00:00.000Z",
+    "completedAt": null,
+    "error": null
+  },
+  "job_qualifierRunning": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "isp": "frontier",
+    "scope": "zip",
+    "zip": "46783",
+    "state": "IN",
+    "status": "running",
+    "phase": "qualifier",
+    "zipcheck": {
+      "status": "completed",
+      "progress": 100,
+      "message": "Zip checker complete",
+      "addressCount": 11272,
+      "outputCsv": "zipcheck_46783.csv"
+    },
+    "qualifier": {
+      "status": "running",
+      "progress": 34,
+      "current": 3832,
+      "total": 11272,
+      "message": "Checking addresses via Frontier API…",
+      "counts": {
+        "eligible": 412,
+        "notEligible": 2891,
+        "existingCustomer": 318,
+        "futureFiber": 156,
+        "skipped": 55
+      }
+    },
+    "createdAt": "2026-06-16T20:00:00.000Z",
+    "completedAt": null,
+    "error": null
+  },
+  "job_completed": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "isp": "frontier",
+    "scope": "zip",
+    "zip": "46783",
+    "state": "IN",
+    "status": "completed",
+    "phase": "done",
+    "zipcheck": {
+      "status": "completed",
+      "progress": 100,
+      "message": "Zip checker complete",
+      "addressCount": 11272,
+      "outputCsv": "zipcheck_46783.csv"
+    },
+    "qualifier": {
+      "status": "completed",
+      "progress": 100,
+      "current": 11272,
+      "total": 11272,
+      "message": "Qualifier complete",
+      "counts": {
+        "eligible": 1247,
+        "notEligible": 8103,
+        "existingCustomer": 892,
+        "futureFiber": 634,
+        "skipped": 396
+      }
+    },
+    "createdAt": "2026-06-16T20:00:00.000Z",
+    "completedAt": "2026-06-16T23:45:00.000Z",
+    "error": null,
+    "downloads": {
+      "eligible": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/eligible",
+      "notEligible": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/notEligible",
+      "existingCustomer": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/existingCustomer",
+      "futureFiber": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/futureFiber",
+      "all": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/all"
+    }
+  },
+  "ispsResponse": {
+    "isps": [
+      { "id": "frontier", "name": "Frontier", "enabled": true },
+      { "id": "spectrum", "name": "Spectrum", "enabled": false, "comingSoon": true }
+    ]
+  },
+  "frontierCountMapping": {
+    "eligible": "frontier_ELIGIBLE.csv — FIBER + no existing service",
+    "notEligible": "frontier_NOT_ELIGIBLE.csv",
+    "existingCustomer": "frontier_EXISTING_CUSTOMER.csv — addressHasExistingService or INCUMBENT",
+    "futureFiber": "frontier_FUTURE_FIBER.csv — copper with future fiber signals",
+    "skipped": "frontier_SKIPPED.csv — not found in predictive or blocked after retries"
+  }
+}

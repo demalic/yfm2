@@ -10,6 +10,7 @@ import { Team } from './components/Team';
 import { Territory } from './components/Territory';
 import { Import } from './components/Import';
 import { FCCLeadLookup } from './components/FCCLeadLookup';
+import { EligibilityCheck } from './components/EligibilityCheck';
 import { Settings } from './components/Settings';
 import { ToastContainer } from './components/Toast';
 import { SettingsProvider } from './hooks/useSettings';
@@ -23,6 +24,7 @@ import {
   Upload,
   Search,
   Settings as SettingsIcon,
+  ShieldCheck,
   LogOut,
   MoreHorizontal,
 } from 'lucide-react';
@@ -60,6 +62,7 @@ function AppContent() {
     { id: 'territory', label: 'Territory', icon: <Map className="w-5 h-5" />, roles: ['admin', 'manager'] },
     { id: 'team', label: 'Team', icon: <Users className="w-5 h-5" />, roles: ['admin'] },
     { id: 'fcc', label: 'Find', icon: <Search className="w-5 h-5" />, roles: ['admin'] },
+    { id: 'eligibility', label: 'Eligibility', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin'] },
     { id: 'import', label: 'Import', icon: <Upload className="w-5 h-5" />, roles: ['admin'] },
     { id: 'settings', label: 'Settings', icon: <SettingsIcon className="w-5 h-5" />, roles: ['admin'] },
   ];
@@ -87,6 +90,8 @@ function AppContent() {
         return <Team />;
       case 'fcc':
         return <FCCLeadLookup />;
+      case 'eligibility':
+        return <EligibilityCheck />;
       case 'import':
         return <Import />;
       case 'settings':

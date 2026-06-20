@@ -79,3 +79,79 @@ export interface ToastMessage {
   message: string;
   type: 'success' | 'error' | 'info';
 }
+
+// ── Tower / Eligibility pipeline ─────────────────────────────────────────────
+
+export type EligibilityScope = 'zip' | 'state';
+
+export type PhaseStatus = 'idle' | 'queued' | 'running' | 'completed' | 'failed';
+
+export type EligibilityCountKey =
+  | 'eligible'
+  | 'notEligible'
+  | 'existingCustomer'
+  | 'futureFiber'
+  | 'skipped';
+
+export interface EligibilityStatusBucket {
+  key: EligibilityCountKey;
+  label: string;
+  description: string;
+  color: string;
+  bgColor: string;
+}
+
+export interface EligibilityCounts {
+  eligible: number;
+  notEligible: number;
+  existingCustomer: number;
+  futureFiber: number;
+  skipped: number;
+}
+
+export interface ZipCheckPhase {
+  status: PhaseStatus;
+  progress: number;
+  message: string;
+  addressCount: number | null;
+  outputCsv: string | null;
+}
+
+export interface QualifierPhase {
+  status: PhaseStatus;
+  progress: number;
+  current: number;
+  total: number;
+  message: string;
+  counts: EligibilityCounts;
+}
+
+export interface EligibilityJob {
+  jobId: string;
+  isp: string;
+  scope: EligibilityScope;
+  zip: string | null;
+  state: string | null;
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  phase: 'zipcheck' | 'qualifier' | 'done';
+  zipcheck: ZipCheckPhase;
+  qualifier: QualifierPhase;
+  createdAt: string;
+  completedAt: string | null;
+  error: string | null;
+  downloads?: Partial<Record<EligibilityCountKey | 'all', string>>;
+}
+
+export interface StartEligibilityJobRequest {
+  isp: string;
+  scope: EligibilityScope;
+  zip?: string;
+  state?: string;
+}
+
+export interface TowerISPInfo {
+  id: string;
+  name: string;
+  enabled: boolean;
+  comingSoon?: boolean;
+}
