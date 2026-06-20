@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { Lock, User, ArrowRight } from 'lucide-react';
+import {
+  getLoginErrorFromException,
+  getLoginErrorFromSupabase,
+  getLoginErrorInfo,
+  type LoginErrorInfo,
+} from '../lib/loginErrors';
+import { Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
 import type { Member } from '../types';
 import yfmLogo from '../assets/yfm-logo.jpg';
 
@@ -10,14 +16,25 @@ export function Login() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<LoginErrorInfo | null>(null);
   const { login } = useAuth();
   const { showToast } = useToast();
 
+  const showLoginError = (info: LoginErrorInfo) => {
+    setLoginError(info);
+    showToast(info.title, 'error');
+  };
+
+  const clearLoginError = () => {
+    if (loginError) setLoginError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
 
     if (!name.trim() || !password.trim()) {
-      showToast('Please enter your name and password', 'error');
+      showLoginError(getLoginErrorInfo('empty'));
       return;
     }
 
@@ -31,18 +48,13 @@ export function Login() {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          showToast('Name not found', 'error');
-        } else {
-          console.error('Supabase error:', error);
-          showToast('Could not reach database — check Supabase env vars on Vercel', 'error');
-        }
+        showLoginError(getLoginErrorFromSupabase(error));
         setIsLoading(false);
         return;
       }
 
       if (!data) {
-        showToast('Name not found', 'error');
+        showLoginError(getLoginErrorInfo('not_found'));
         setIsLoading(false);
         return;
       }
@@ -50,15 +62,16 @@ export function Login() {
       const member = data as Member;
 
       if (member.password !== password) {
-        showToast('Incorrect password', 'error');
+        showLoginError(getLoginErrorInfo('wrong_password'));
         setIsLoading(false);
         return;
       }
 
+      setLoginError(null);
       login(member);
+      showToast(`Welcome back, ${member.name}`, 'success');
     } catch (err) {
-      console.error('Login error:', err);
-      showToast('Login failed', 'error');
+      showLoginError(getLoginErrorFromException(err));
     }
 
     setIsLoading(false);
@@ -93,7 +106,10 @@ export function Login() {
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                clearLoginError();
+              }}
               placeholder="Your name"
               autoComplete="name"
               className="w-full bg-[#111] border border-[#222] rounded-2xl pl-12 pr-4 py-4
@@ -107,7 +123,10 @@ export function Login() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearLoginError();
+              }}
               placeholder="Password"
               autoComplete="current-password"
               className="w-full bg-[#111] border border-[#222] rounded-2xl pl-12 pr-4 py-4
@@ -115,6 +134,19 @@ export function Login() {
                        text-base transition-colors"
             />
           </div>
+
+          {loginError && (
+            <div
+              role="alert"
+              className="flex gap-3 rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-red-400 font-semibold text-sm">{loginError.title}</p>
+                <p className="text-red-300/80 text-xs mt-1 leading-relaxed">{loginError.hint}</p>
+              </div>
+            </div>
+          )}
 
           <button
             type="submit"

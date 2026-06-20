@@ -199,9 +199,6 @@ function AppContent() {
             </div>
           </nav>
         </main>
-
-        {/* Toast Container */}
-        <ToastContainer />
       </div>
     </LeadsProvider>
   );
@@ -217,6 +214,7 @@ function App() {
         <SettingsProvider>
           {!splashDone && <SplashScreen onDone={handleSplashDone} />}
           <AppContent />
+          <ToastContainer />
         </SettingsProvider>
       </ToastProvider>
     </AuthProvider>
