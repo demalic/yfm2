@@ -38,7 +38,7 @@ export function getLoginErrorInfo(
     default:
       return {
         title: 'Sign in failed',
-        hint: detail || 'Something went wrong. Try again in a moment.',
+        hint: 'Something went wrong. Try again in a moment.',
       };
   }
 }
@@ -48,10 +48,17 @@ export function getLoginErrorFromSupabase(error: PostgrestError): LoginErrorInfo
     return getLoginErrorInfo('not_found');
   }
 
+  if (isMissingTableError(error)) {
+    return {
+      title: 'Database not set up',
+      hint: 'The team table is missing in Supabase. Run the project migrations in the Supabase SQL editor, then try again.',
+    };
+  }
+
   if (error.code === '42P01') {
     return {
-      title: 'Team table missing',
-      hint: 'The database is not set up yet. Run Supabase migrations for this project.',
+      title: 'Database not set up',
+      hint: 'Required tables are missing. Run the Supabase migrations for this project.',
     };
   }
 
@@ -67,7 +74,16 @@ export function getLoginErrorFromSupabase(error: PostgrestError): LoginErrorInfo
   }
 
   console.error('Supabase login error:', error);
-  return getLoginErrorInfo('unknown', error.message);
+  return getLoginErrorInfo('unknown');
+}
+
+function isMissingTableError(error: PostgrestError): boolean {
+  const message = error.message?.toLowerCase() ?? '';
+  return (
+    error.code === 'PGRST205' ||
+    message.includes('schema cache') ||
+    message.includes('could not find the table')
+  );
 }
 
 export function getLoginErrorFromException(err: unknown): LoginErrorInfo {
@@ -80,7 +96,7 @@ export function getLoginErrorFromException(err: unknown): LoginErrorInfo {
       return getLoginErrorInfo('config');
     }
     console.error('Login exception:', err);
-    return getLoginErrorInfo('unknown', err.message);
+    return getLoginErrorInfo('unknown');
   }
 
   return getLoginErrorInfo('unknown');
