@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { Lock, User, ArrowRight } from 'lucide-react';
 import type { Member } from '../types';
+import yfmLogo from '../assets/yfm-logo.jpg';
 
 export function Login() {
   const [name, setName] = useState('');
@@ -29,7 +30,18 @@ export function Login() {
         .ilike('name', name.trim())
         .single();
 
-      if (error || !data) {
+      if (error) {
+        if (error.code === 'PGRST116') {
+          showToast('Name not found', 'error');
+        } else {
+          console.error('Supabase error:', error);
+          showToast('Could not reach database — check Supabase env vars on Vercel', 'error');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data) {
         showToast('Name not found', 'error');
         setIsLoading(false);
         return;
@@ -58,7 +70,7 @@ export function Login() {
         {/* Logo */}
         <div className="text-center mb-10">
           <img
-            src="/yfm-logo.jpg"
+            src={yfmLogo}
             alt="YFM"
             className="w-56 h-56 mx-auto mb-4 object-contain"
             onError={(e) => {

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import yfmLogo from '../assets/yfm-logo.jpg';
 
 interface SplashScreenProps {
   onDone: () => void;
@@ -38,7 +39,7 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
         }}
       >
         <img
-          src="/yfm-logo.jpg"
+          src={yfmLogo}
           alt="YFM"
           className="w-80 h-80 object-contain"
           onError={(e) => {
