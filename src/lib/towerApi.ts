@@ -1,9 +1,21 @@
 import type { EligibilityJob, JobLogsResponse, PendingQualifierJob, StartEligibilityJobRequest, TowerHealthResponse, TowerISPInfo } from '../types';
 
 const TOWER_API_URL = import.meta.env.VITE_TOWER_API_URL?.replace(/\/$/, '') ?? '';
+const TOWER_API_KEY = import.meta.env.VITE_TOWER_API_KEY?.trim() ?? '';
 
 export const TOWER_OUTDATED_MESSAGE =
   'Tower API is outdated — sync tower-server to Drive and restart python main.py.';
+
+export function towerHealthSupportsLoggedZipchecks(
+  health: TowerHealthResponse | null | undefined
+): boolean {
+  if (!health?.ok) return false;
+  return (
+    health.features?.pendingQualifier === true ||
+    health.apiVersion === '1.1.0' ||
+    Array.isArray(health.pendingJobs)
+  );
+}
 
 export function isTowerConfigured(): boolean {
   return Boolean(TOWER_API_URL);
@@ -36,6 +48,7 @@ async function towerFetch<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(TOWER_API_KEY ? { 'X-Tower-Key': TOWER_API_KEY } : {}),
       ...init?.headers,
     },
   });
@@ -105,6 +118,11 @@ export async function retryQualifierJob(jobId: string): Promise<EligibilityJob> 
 }
 
 export async function fetchPendingQualifierJobs(): Promise<PendingQualifierJob[]> {
+  const health = await fetchTowerHealth();
+  if (Array.isArray(health.pendingJobs)) {
+    return health.pendingJobs;
+  }
+
   try {
     const data = await towerFetch<{ jobs: PendingQualifierJob[] }>('/api/jobs/pending-qualifier');
     return data.jobs ?? [];

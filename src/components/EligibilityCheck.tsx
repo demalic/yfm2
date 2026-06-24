@@ -16,10 +16,15 @@ import { US_STATES } from '../constants/usStates';
 import { getISP, ISP_REGISTRY } from '../constants/isps';
 import { useEligibilityJob } from '../hooks/useEligibilityJob';
 import { useJobLogs } from '../hooks/useJobLogs';
-import { usePendingQualifierJobs } from '../hooks/usePendingQualifierJobs';
 import { useTowerHealth } from '../hooks/useTowerHealth';
 import { useToast } from '../hooks/useToast';
-import { getDownloadUrl, getTowerApiUrl, isTowerConfigured, TOWER_OUTDATED_MESSAGE } from '../lib/towerApi';
+import {
+  getDownloadUrl,
+  getTowerApiUrl,
+  isTowerConfigured,
+  TOWER_OUTDATED_MESSAGE,
+  towerHealthSupportsLoggedZipchecks,
+} from '../lib/towerApi';
 import type { EligibilityJob, EligibilityCountKey, PendingQualifierJob, PhaseStatus, StartEligibilityJobRequest } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import { JobTerminal } from './JobTerminal';
@@ -134,18 +139,11 @@ export function EligibilityCheck() {
   const ispConfig = getISP(selectedIsp);
   const isRunning = isStarting || isPolling || (job?.status === 'running' || job?.status === 'queued');
   const towerConfigured = isTowerConfigured();
-  const { status: towerStatus, health: towerHealth, refresh: refreshTowerHealth } = useTowerHealth();
+  const { status: towerStatus, health: towerHealth, error: towerError, refresh: refreshTowerHealth } =
+    useTowerHealth();
   const towerOnline = towerStatus === 'online';
-  const towerSupportsPending =
-    towerHealth?.features?.pendingQualifier === true ||
-    towerHealth?.apiVersion === '1.1.0' ||
-    typeof towerHealth?.pendingQualifierCount === 'number';
-  const {
-    jobs: pendingJobs,
-    isLoading: isPendingLoading,
-    error: pendingError,
-    refresh: refreshPendingJobs,
-  } = usePendingQualifierJobs(towerConfigured && scope === 'zip');
+  const pendingJobs = towerHealth?.pendingJobs ?? [];
+  const isPendingLoading = towerStatus === 'checking';
   const [isRefreshingTower, setIsRefreshingTower] = useState(false);
   const jobFilePaths = useMemo(() => (job ? resolveJobFilePaths(job) : null), [job]);
   const selectedPending = useMemo(
@@ -156,8 +154,9 @@ export function EligibilityCheck() {
   const showOutdatedTowerHint = Boolean(
     towerConfigured &&
       towerOnline &&
+      towerHealth &&
       !isPendingLoading &&
-      (!towerSupportsPending || pendingError === TOWER_OUTDATED_MESSAGE)
+      !towerHealthSupportsLoggedZipchecks(towerHealth)
   );
 
   useEffect(() => {
@@ -169,14 +168,13 @@ export function EligibilityCheck() {
   const handleLoggedOfflineInteract = () => {
     if (towerOnline || isRunning) return;
     setShowLoggedOfflineHint(true);
-    void refreshPendingJobs();
+    void refreshTowerHealth();
   };
 
   const handleRefreshTower = async () => {
     setIsRefreshingTower(true);
     try {
       await refreshTowerHealth();
-      await refreshPendingJobs();
     } finally {
       setIsRefreshingTower(false);
     }
@@ -222,13 +220,13 @@ export function EligibilityCheck() {
       scope,
       ...(scope === 'zip' ? { zip: zip.trim() } : { state: selectedState }),
     });
-    await refreshPendingJobs();
+    await refreshTowerHealth();
   };
 
   const handleResumeSelection = async (jobId: string) => {
     if (!towerOnline) {
       setShowLoggedOfflineHint(true);
-      void refreshPendingJobs();
+      void refreshTowerHealth();
       return;
     }
 
@@ -260,7 +258,7 @@ export function EligibilityCheck() {
     if (retryMode === 'qualifier') {
       await retryQualifier();
       showToast('Qualifier restarted — zip checker skipped', 'info');
-      await refreshPendingJobs();
+      await refreshTowerHealth();
       return;
     }
 
@@ -465,7 +463,7 @@ export function EligibilityCheck() {
               {showLoggedOfflineHint && !towerOnline && (
                 <div className="text-xs text-amber-300 mt-2 space-y-1">
                   <p>Tower offline — reconnect to load logged zipchecks.</p>
-                  <p>{pendingError ?? 'Failed to load pending ZIPs'}</p>
+                  <p>{towerError ?? 'Failed to load pending ZIPs'}</p>
                 </div>
               )}
               {towerConfigured && towerOnline && isPendingLoading && (
@@ -477,15 +475,15 @@ export function EligibilityCheck() {
               {towerConfigured &&
                 towerOnline &&
                 !isPendingLoading &&
-                towerSupportsPending &&
+                towerHealthSupportsLoggedZipchecks(towerHealth) &&
                 pendingJobs.length === 0 &&
                 !isResumeMode && (
                   <p className="text-xs text-gray-500 mt-2">
                     No logged zipchecks waiting for qualifier — enter a new ZIP to run the full pipeline.
                   </p>
                 )}
-              {towerOnline && pendingError && !showLoggedOfflineHint && !showOutdatedTowerHint && (
-                <p className="text-xs text-amber-300 mt-2">{pendingError}</p>
+              {towerOnline && towerError && !showLoggedOfflineHint && !showOutdatedTowerHint && (
+                <p className="text-xs text-amber-300 mt-2">{towerError}</p>
               )}
             </div>
           ) : (

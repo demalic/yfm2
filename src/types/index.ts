@@ -172,6 +172,7 @@ export interface TowerHealthResponse {
   jobsDir?: string;
   jobFolderCount?: number;
   pendingQualifierCount?: number;
+  pendingJobs?: PendingQualifierJob[];
   python: string;
   scripts: {
     zipChecker: boolean;

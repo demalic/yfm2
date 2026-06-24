@@ -37,6 +37,7 @@ def health() -> dict:
         "jobsDir": str(JOBS_DIR),
         "jobFolderCount": job_manager.count_job_folders(),
         "pendingQualifierCount": len(pending_jobs),
+        "pendingJobs": [job.model_dump() for job in pending_jobs],
         "python": TOWER_PYTHON,
         "scripts": {
             "zipChecker": ZIPCHECK_SCRIPT.exists(),
