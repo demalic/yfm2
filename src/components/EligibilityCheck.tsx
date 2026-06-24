@@ -245,6 +245,7 @@ export function EligibilityCheck() {
           </div>
           <TowerStatusBadge
             status={towerStatus}
+            towerUrl={towerConfigured ? getTowerApiUrl() : undefined}
             onRefresh={towerConfigured ? handleRefreshTower : undefined}
             isRefreshing={isRefreshingTower}
           />
@@ -259,17 +260,6 @@ export function EligibilityCheck() {
             <p className="text-amber-200/70 text-xs mt-1">
               Set <code className="text-amber-200">VITE_TOWER_API_URL</code> in your{' '}
               <code className="text-amber-200">.env</code> file (or Vercel env vars) to point at the tower API.
-            </p>
-          </div>
-        )}
-
-        {towerConfigured && towerStatus === 'offline' && (
-          <div className="mx-4 mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
-            <p className="text-red-300 font-medium text-sm">Tower is offline</p>
-            <p className="text-red-200/70 text-xs mt-1">
-              The API URL is set but the tower is not responding. Start{' '}
-              <code className="text-red-200">python main.py</code> and{' '}
-              <code className="text-red-200">tailscale funnel 8787</code> on the tower PC, then refresh.
             </p>
           </div>
         )}
