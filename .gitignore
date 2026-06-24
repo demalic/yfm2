@@ -21,3 +21,11 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.vercel
+.env*
+!.env.example
+!**/.env.example
+tower-server/.venv
+tower-server/jobs
+tower-server/.env
+tower-server/__pycache__

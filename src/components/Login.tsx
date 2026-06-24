@@ -78,93 +78,89 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen login-screen relative flex flex-col items-center justify-center p-6 overflow-hidden">
+      <div className="login-grid absolute inset-0 pointer-events-none" aria-hidden />
+
+      <div className="relative w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <img
             src={yfmLogo}
             alt="YFM"
-            className="w-56 h-56 mx-auto mb-4 object-contain"
-            onError={(e) => {
-              const el = e.currentTarget;
-              el.style.display = 'none';
-              const fallback = el.nextElementSibling as HTMLElement;
-              if (fallback) fallback.style.display = 'block';
-            }}
+            className="w-44 h-44 sm:w-52 sm:h-52 mx-auto object-contain logo-glow"
           />
-          <div style={{ display: 'none' }}>
-            <h1 className="text-6xl font-black text-white tracking-tight">YFM</h1>
-          </div>
-          <p className="text-gray-500 text-sm mt-2 tracking-widest uppercase">Field Sales Platform</p>
+          <p className="text-gray-500 text-xs mt-4 tracking-[0.25em] uppercase font-medium">
+            Field Sales Platform
+          </p>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="relative">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                clearLoginError();
-              }}
-              placeholder="Your name"
-              autoComplete="name"
-              className="w-full bg-[#111] border border-[#222] rounded-2xl pl-12 pr-4 py-4
-                       text-white placeholder-gray-600 focus:outline-none focus:border-accent-cyan
-                       text-base transition-colors"
-            />
+        {/* Form card */}
+        <div className="glass-card rounded-3xl p-6 sm:p-8">
+          <div className="mb-6">
+            <h1 className="text-lg font-semibold text-white">Sign in</h1>
+            <p className="text-sm text-gray-500 mt-1">Enter your team credentials</p>
           </div>
 
-          <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                clearLoginError();
-              }}
-              placeholder="Password"
-              autoComplete="current-password"
-              className="w-full bg-[#111] border border-[#222] rounded-2xl pl-12 pr-4 py-4
-                       text-white placeholder-gray-600 focus:outline-none focus:border-accent-cyan
-                       text-base transition-colors"
-            />
-          </div>
-
-          {loginError && (
-            <div
-              role="alert"
-              className="flex gap-3 rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-3"
-            >
-              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-red-400 font-semibold text-sm">{loginError.title}</p>
-                <p className="text-red-300/80 text-xs mt-1 leading-relaxed">{loginError.hint}</p>
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  clearLoginError();
+                }}
+                placeholder="Your name"
+                autoComplete="name"
+                className="input-yfm"
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-accent-cyan text-black font-bold py-4 rounded-2xl
-                     hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
-                     disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                Sign In
-                <ArrowRight className="w-5 h-5" />
-              </>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  clearLoginError();
+                }}
+                placeholder="Password"
+                autoComplete="current-password"
+                className="input-yfm"
+              />
+            </div>
+
+            {loginError && (
+              <div
+                role="alert"
+                className="flex gap-3 rounded-2xl bg-red-500/10 border border-red-500/25 px-4 py-3"
+              >
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-400 font-semibold text-sm">{loginError.title}</p>
+                  <p className="text-red-300/75 text-xs mt-1 leading-relaxed">{loginError.hint}</p>
+                </div>
+              </div>
             )}
-          </button>
-        </form>
+
+            <button type="submit" disabled={isLoading} className="btn-primary flex items-center justify-center gap-2">
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-dark-bg border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-gray-600 text-xs mt-6">
+          Your Future Matters
+        </p>
       </div>
     </div>
   );

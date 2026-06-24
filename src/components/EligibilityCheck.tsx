@@ -3,8 +3,10 @@ import {
   CheckCircle2,
   Circle,
   Download,
+  FileText,
   Loader2,
   Play,
+  RefreshCw,
   RotateCcw,
   ShieldCheck,
   XCircle,
@@ -12,9 +14,12 @@ import {
 import { US_STATES } from '../constants/usStates';
 import { getISP, ISP_REGISTRY } from '../constants/isps';
 import { useEligibilityJob } from '../hooks/useEligibilityJob';
+import { useJobLogs } from '../hooks/useJobLogs';
 import { useToast } from '../hooks/useToast';
 import { getDownloadUrl, getTowerApiUrl, isTowerConfigured } from '../lib/towerApi';
-import type { EligibilityCountKey, PhaseStatus } from '../types';
+import type { EligibilityJob, EligibilityCountKey, PhaseStatus, StartEligibilityJobRequest } from '../types';
+import { ConfirmDialog } from './ConfirmDialog';
+import { JobTerminal } from './JobTerminal';
 
 function PhaseProgressBar({ progress, status }: { progress: number; status: PhaseStatus }) {
   const pct = Math.min(100, Math.max(0, progress));
@@ -71,18 +76,47 @@ function PhaseHeader({
   );
 }
 
+function resolveJobFilePaths(job: EligibilityJob) {
+  const stem =
+    job.zipcheck.outputCsv?.replace(/\.csv$/i, '') ??
+    (job.zip ? `zipcheck_${job.zip}` : 'zipcheck');
+  const relativeBase = `jobs/${job.jobId}`;
+
+  return {
+    inputCsv: job.inputCsvPath ?? `${relativeBase}/${stem}.csv`,
+    outputDir: job.qualifierOutputDir ?? `${relativeBase}/${stem}/`,
+  };
+}
+
+function buildJobRequest(job: EligibilityJob): StartEligibilityJobRequest {
+  return {
+    isp: job.isp,
+    scope: job.scope,
+    ...(job.scope === 'zip' ? { zip: job.zip ?? undefined } : { state: job.state ?? undefined }),
+  };
+}
+
 export function EligibilityCheck() {
   const { showToast } = useToast();
-  const { job, isStarting, isPolling, error, startJob, cancelJob, reset } = useEligibilityJob();
+  const { job, isStarting, isPolling, error, startJob, retryQualifier, cancelJob, reset } = useEligibilityJob();
+  const logsActive = Boolean(job && (job.status === 'queued' || job.status === 'running'));
+  const {
+    lines: logLines,
+    isPolling: isLogPolling,
+    error: logError,
+    reset: resetLogs,
+  } = useJobLogs(job?.jobId ?? null, logsActive);
 
   const [selectedIsp, setSelectedIsp] = useState('frontier');
   const [scope, setScope] = useState<'zip' | 'state'>('zip');
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
+  const [retryMode, setRetryMode] = useState<'qualifier' | 'full' | null>(null);
 
   const ispConfig = getISP(selectedIsp);
   const isRunning = isStarting || isPolling || (job?.status === 'running' || job?.status === 'queued');
   const towerConfigured = isTowerConfigured();
+  const jobFilePaths = useMemo(() => (job ? resolveJobFilePaths(job) : null), [job]);
 
   const canRun = useMemo(() => {
     if (!ispConfig?.enabled || isRunning) return false;
@@ -90,14 +124,44 @@ export function EligibilityCheck() {
     return Boolean(selectedState);
   }, [ispConfig?.enabled, isRunning, scope, zip, selectedState]);
 
+  const canRetry = Boolean(
+    !isRunning &&
+      towerConfigured &&
+      job &&
+      (job.status === 'failed' || job.status === 'cancelled')
+  );
+
+  const canRetryQualifier = Boolean(canRetry && job?.zipcheck.status === 'completed');
+  const canRetryFull = canRetry;
+
+  const runPipeline = async (request: StartEligibilityJobRequest) => {
+    resetLogs();
+    reset();
+    await startJob(request);
+  };
+
   const handleRun = async () => {
     if (!canRun) return;
 
-    await startJob({
+    await runPipeline({
       isp: selectedIsp,
       scope,
       ...(scope === 'zip' ? { zip: zip.trim() } : { state: selectedState }),
     });
+  };
+
+  const handleRetryConfirm = async () => {
+    if (!job || !retryMode) return;
+    setRetryMode(null);
+
+    if (retryMode === 'qualifier') {
+      await retryQualifier();
+      showToast('Qualifier restarted — zip checker skipped', 'info');
+      return;
+    }
+
+    await runPipeline(buildJobRequest(job));
+    showToast('Full pipeline restarted on the tower', 'info');
   };
 
   const handleDownload = (key: string, path: string) => {
@@ -106,17 +170,62 @@ export function EligibilityCheck() {
     showToast(`Downloading ${key} results`, 'info');
   };
 
+  const retryTargetLabel = job?.zip
+    ? `ZIP ${job.zip}`
+    : job?.state
+      ? `state ${job.state}`
+      : 'this run';
+
   return (
     <div className="h-full flex flex-col bg-dark-bg">
+      <ConfirmDialog
+        open={retryMode !== null}
+        title={retryMode === 'qualifier' ? 'Retry qualifier only?' : 'Run full pipeline again?'}
+        description={
+          retryMode === 'qualifier' ? (
+            <>
+              <p>
+                Keeps the successful zip checker result and re-runs{' '}
+                <strong className="text-white">only the qualifier</strong> for{' '}
+                <strong className="text-accent-cyan">{retryTargetLabel}</strong>.
+              </p>
+              {jobFilePaths && (
+                <p className="mt-2 font-mono text-xs text-accent-cyan/90 break-all">
+                  {jobFilePaths.inputCsv}
+                </p>
+              )}
+              <p className="mt-2">
+                {job && job.qualifier.current > 0
+                  ? `Resumes from address ${job.qualifier.current.toLocaleString()} if the last run got that far.`
+                  : 'Zip checker will not run again.'}
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                Starts a <strong className="text-white">brand new job</strong> and re-runs zip checker
+                + qualifier for <strong className="text-accent-cyan">{retryTargetLabel}</strong>.
+              </p>
+              <p className="mt-2">
+                Use this only if the zip checker failed or you want a fresh address list.
+              </p>
+            </>
+          )
+        }
+        confirmLabel={retryMode === 'qualifier' ? 'Retry qualifier' : 'Start over'}
+        cancelLabel="Not yet"
+        variant={retryMode === 'qualifier' ? 'default' : 'danger'}
+        onConfirm={handleRetryConfirm}
+        onCancel={() => setRetryMode(null)}
+      />
+
       {/* Header */}
-      <div className="px-4 py-4 border-b border-dark-border shrink-0">
-        <div className="flex items-center gap-2 mb-1">
+      <div className="page-header shrink-0">
+        <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-accent-cyan" />
-          <h1 className="text-xl font-bold text-white">Eligibility</h1>
+          <h1 className="page-title">Eligibility</h1>
         </div>
-        <p className="text-sm text-gray-400">
-          Run zip checker → qualifier pipeline on the tower
-        </p>
+        <p className="page-subtitle">Run zip checker → qualifier pipeline on the tower</p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -225,9 +334,40 @@ export function EligibilityCheck() {
               )}
             </button>
 
+            {canRetryQualifier && (
+              <button
+                type="button"
+                onClick={() => setRetryMode('qualifier')}
+                className="px-4 py-3 bg-accent-cyan/15 border border-accent-cyan/30 rounded-xl
+                         text-accent-cyan hover:bg-accent-cyan/25 transition-colors flex items-center gap-2
+                         text-sm font-medium shrink-0"
+                title="Retry qualifier using existing zip checker CSV"
+              >
+                <RefreshCw className="w-5 h-5" />
+                <span className="hidden sm:inline">Retry qualifier</span>
+              </button>
+            )}
+
+            {canRetryFull && !canRetryQualifier && (
+              <button
+                type="button"
+                onClick={() => setRetryMode('full')}
+                className="px-4 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl
+                         text-amber-300 hover:bg-amber-500/25 transition-colors flex items-center gap-2
+                         text-sm font-medium shrink-0"
+                title="Retry full pipeline"
+              >
+                <RefreshCw className="w-5 h-5" />
+                <span className="hidden sm:inline">Retry</span>
+              </button>
+            )}
+
             {job && !isRunning && (
               <button
-                onClick={reset}
+                onClick={() => {
+                  resetLogs();
+                  reset();
+                }}
                 className="px-4 py-3 bg-dark-card border border-dark-border rounded-xl
                          text-gray-400 hover:text-white transition-colors"
                 title="Clear results"
@@ -274,6 +414,33 @@ export function EligibilityCheck() {
               )}
             </div>
 
+            {jobFilePaths && (
+              <section className="bg-dark-card border border-dark-border rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-accent-cyan" />
+                  <h3 className="font-semibold text-white text-sm">Tower file paths</h3>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Zip checker writes one CSV per job; the qualifier reads that same file (not a shared
+                  bot-folder CSV).
+                </p>
+                <div className="space-y-2 text-xs">
+                  <div className="rounded-xl bg-dark-bg/80 border border-dark-border px-3 py-2">
+                    <p className="text-gray-500 uppercase tracking-wide text-[10px] mb-1">
+                      Qualifier input (zip checker output)
+                    </p>
+                    <code className="text-accent-cyan break-all">{jobFilePaths.inputCsv}</code>
+                  </div>
+                  <div className="rounded-xl bg-dark-bg/80 border border-dark-border px-3 py-2">
+                    <p className="text-gray-500 uppercase tracking-wide text-[10px] mb-1">
+                      Qualifier output folder (bucket CSVs)
+                    </p>
+                    <code className="text-gray-300 break-all">{jobFilePaths.outputDir}</code>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Phase 1: Zip Checker */}
             <section className="bg-dark-card border border-dark-border rounded-2xl p-4 space-y-3">
               <PhaseHeader step={1} title="Zip Checker" status={job.zipcheck.status} />
@@ -287,7 +454,7 @@ export function EligibilityCheck() {
               </div>
               {job.zipcheck.outputCsv && job.zipcheck.status === 'completed' && (
                 <p className="text-xs text-green-400/80">
-                  Output: {job.zipcheck.outputCsv}
+                  Output file: {job.zipcheck.outputCsv}
                 </p>
               )}
             </section>
@@ -327,6 +494,12 @@ export function EligibilityCheck() {
               )}
             </section>
 
+            <JobTerminal
+              lines={logLines}
+              isLive={logsActive && isLogPolling}
+              error={logError}
+            />
+
             {/* Complete */}
             {job.status === 'completed' && (
               <section className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 space-y-3">
@@ -360,9 +533,34 @@ export function EligibilityCheck() {
             )}
 
             {job.status === 'failed' && job.error && (
-              <section className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+              <section className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 space-y-3">
                 <p className="text-red-400 font-medium">Pipeline failed</p>
-                <p className="text-sm text-red-300/80 mt-1">{job.error}</p>
+                <p className="text-sm text-red-300/80 whitespace-pre-wrap">{job.error}</p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {canRetryQualifier && (
+                    <button
+                      type="button"
+                      onClick={() => setRetryMode('qualifier')}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                               bg-accent-cyan/15 border border-accent-cyan/40 text-accent-cyan
+                               hover:bg-accent-cyan/25 transition-all"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Retry qualifier
+                    </button>
+                  )}
+                  {canRetryFull && (
+                    <button
+                      type="button"
+                      onClick={() => setRetryMode('full')}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium
+                               bg-dark-card border border-dark-border text-gray-400
+                               hover:text-white hover:border-gray-500 transition-all"
+                    >
+                      Start over (full pipeline)
+                    </button>
+                  )}
+                </div>
               </section>
             )}
           </div>

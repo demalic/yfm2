@@ -140,6 +140,10 @@ export interface EligibilityJob {
   completedAt: string | null;
   error: string | null;
   downloads?: Partial<Record<EligibilityCountKey | 'all', string>>;
+  /** Full path on tower — zip checker output / qualifier input */
+  inputCsvPath?: string | null;
+  /** Folder on tower where qualifier writes bucket CSVs */
+  qualifierOutputDir?: string | null;
 }
 
 export interface StartEligibilityJobRequest {
@@ -154,4 +158,10 @@ export interface TowerISPInfo {
   name: string;
   enabled: boolean;
   comingSoon?: boolean;
+}
+
+export interface JobLogsResponse {
+  lines: string[];
+  total: number;
+  offset: number;
 }

@@ -20,6 +20,107 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* ── YFM design system ───────────────────────────────────────────────────── */
+
+.app-shell {
+  background-color: #0d0f14;
+  background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6, 182, 212, 0.08), transparent),
+    radial-gradient(ellipse 40% 30% at 100% 0%, rgba(59, 130, 246, 0.06), transparent);
+}
+
+.login-screen {
+  background-color: #0a0c10;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(6, 182, 212, 0.15), transparent),
+    radial-gradient(ellipse 50% 40% at 80% 100%, rgba(59, 130, 246, 0.08), transparent);
+}
+
+.login-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent);
+}
+
+.glass-card {
+  background: rgba(22, 25, 34, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.input-yfm {
+  @apply w-full bg-dark-bg/80 border border-dark-border rounded-2xl pl-12 pr-4 py-4
+         text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan
+         focus:shadow-glow-sm text-base transition-all duration-200;
+}
+
+.btn-primary {
+  @apply w-full bg-accent-cyan text-dark-bg font-bold py-4 rounded-2xl
+         hover:bg-cyan-300 active:scale-[0.98] transition-all duration-200
+         disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100
+         shadow-glow-sm hover:shadow-glow;
+}
+
+.logo-glow {
+  filter: drop-shadow(0 0 28px rgba(6, 182, 212, 0.35));
+}
+
+.sidebar-panel {
+  background: linear-gradient(180deg, #161922 0%, #12151c 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nav-active {
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.18) 0%, rgba(6, 182, 212, 0.06) 100%);
+  box-shadow: inset 3px 0 0 #06b6d4;
+}
+
+.page-header {
+  @apply px-4 py-4 border-b border-dark-border/80 bg-dark-card/40 backdrop-blur-sm;
+}
+
+.page-title {
+  @apply text-xl font-bold text-white tracking-tight;
+}
+
+.page-subtitle {
+  @apply text-sm text-gray-400 mt-0.5;
+}
+
+.loading-ring {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 2px solid rgba(6, 182, 212, 0.2);
+  border-top-color: #06b6d4;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.splash-bar {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.splash-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #06b6d4, #3b82f6);
+  animation: splash-load 2s ease-out forwards;
+}
+
+@keyframes splash-load {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

@@ -98,9 +98,9 @@ export function FCCLeadLookup() {
   return (
     <div className="h-full flex flex-col bg-dark-bg">
       {/* Header */}
-      <div className="px-4 py-4 border-b border-dark-border">
-        <h1 className="text-xl font-bold text-white mb-1">Find Leads</h1>
-        <p className="text-sm text-gray-400">Search FCC fiber availability data</p>
+      <div className="page-header shrink-0">
+        <h1 className="page-title">Find Leads</h1>
+        <p className="page-subtitle">Search FCC fiber availability data</p>
       </div>
 
       {/* Search Form */}

@@ -1,4 +1,4 @@
-import type { EligibilityJob, StartEligibilityJobRequest, TowerISPInfo } from '../types';
+import type { EligibilityJob, JobLogsResponse, StartEligibilityJobRequest, TowerISPInfo } from '../types';
 
 const TOWER_API_URL = import.meta.env.VITE_TOWER_API_URL?.replace(/\/$/, '') ?? '';
 
@@ -38,7 +38,7 @@ async function towerFetch<T>(path: string, init?: RequestInit): Promise<T> {
     try {
       const body = await response.json();
       if (body?.error) message = body.error;
-      else if (body?.message) message = body.message;
+      else if (body?.detail) message = typeof body.detail === 'string' ? body.detail : message;
     } catch {
       // ignore parse errors
     }
@@ -58,10 +58,16 @@ async function towerFetch<T>(path: string, init?: RequestInit): Promise<T> {
  * GET /api/jobs/:jobId
  *   → EligibilityJob (live zipcheck + qualifier progress)
  *
+ * GET /api/jobs/:jobId/logs?offset=0
+ *   → { lines, total, offset } (incremental stdout from zip checker + qualifier)
+ *
  * GET /api/isps
  *   → { isps: TowerISPInfo[] }
  *
  * DELETE /api/jobs/:jobId  (optional cancel)
+ *
+ * POST /api/jobs/:jobId/retry-qualifier
+ *   → EligibilityJob (re-run qualifier only, reuse zip checker CSV)
  */
 export async function startEligibilityJob(
   request: StartEligibilityJobRequest
@@ -76,8 +82,16 @@ export async function fetchEligibilityJob(jobId: string): Promise<EligibilityJob
   return towerFetch(`/api/jobs/${jobId}`);
 }
 
+export async function fetchJobLogs(jobId: string, offset = 0): Promise<JobLogsResponse> {
+  return towerFetch(`/api/jobs/${jobId}/logs?offset=${offset}`);
+}
+
 export async function cancelEligibilityJob(jobId: string): Promise<void> {
   await towerFetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+}
+
+export async function retryQualifierJob(jobId: string): Promise<EligibilityJob> {
+  return towerFetch(`/api/jobs/${jobId}/retry-qualifier`, { method: 'POST' });
 }
 
 export async function fetchTowerISPs(): Promise<TowerISPInfo[]> {
@@ -103,6 +117,8 @@ export function createEmptyJob(jobId: string, isp: string, scope: 'zip' | 'state
     createdAt: new Date().toISOString(),
     completedAt: null,
     error: null,
+    inputCsvPath: null,
+    qualifierOutputDir: null,
     zipcheck: {
       status: 'queued',
       progress: 0,

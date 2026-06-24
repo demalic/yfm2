@@ -15,6 +15,7 @@ import { Settings } from './components/Settings';
 import { ToastContainer } from './components/Toast';
 import { SettingsProvider } from './hooks/useSettings';
 import { LeadsProvider } from './hooks/useLeads';
+import yfmLogo from './assets/yfm-logo.jpg';
 import {
   MapPin,
   List,
@@ -26,7 +27,6 @@ import {
   Settings as SettingsIcon,
   ShieldCheck,
   LogOut,
-  MoreHorizontal,
 } from 'lucide-react';
 
 interface NavItem {
@@ -40,12 +40,12 @@ function AppContent() {
   const { member, isAuthenticated, isLoading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('map');
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="h-screen bg-dark-bg flex items-center justify-center">
-        <div className="animate-pulse text-accent-cyan text-lg">Loading...</div>
+      <div className="h-screen app-shell flex flex-col items-center justify-center gap-4">
+        <div className="loading-ring" />
+        <p className="text-gray-500 text-sm">Loading YFM…</p>
       </div>
     );
   }
@@ -105,90 +105,89 @@ function AppContent() {
 
   return (
     <LeadsProvider>
-      <div className="h-screen w-full flex bg-dark-bg overflow-hidden fixed inset-0">
+      <div className="h-screen w-full flex app-shell overflow-hidden fixed inset-0">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex flex-col bg-dark-card border-r border-dark-border w-[240px] shrink-0">
+        <aside className="hidden md:flex flex-col sidebar-panel w-[260px] shrink-0">
           {/* Logo */}
-          <div className="px-4 py-6 border-b border-dark-border">
+          <div className="px-5 py-5 border-b border-white/5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-accent-cyan/20 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-accent-cyan" />
-              </div>
+              <img
+                src={yfmLogo}
+                alt="YFM"
+                className="w-11 h-11 rounded-xl object-cover ring-1 ring-white/10"
+              />
               <div>
-                <h1 className="font-bold text-white text-lg">YFM</h1>
-                <p className="text-xs text-gray-500 capitalize">{member?.role}</p>
+                <h1 className="font-bold text-white text-lg tracking-tight">YFM</h1>
+                <p className="text-xs text-accent-cyan/80 capitalize font-medium">{member?.role}</p>
               </div>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
             {filteredNav.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
                           ${isNavActive(item.id)
-                            ? 'bg-accent-cyan/20 text-accent-cyan'
-                            : 'text-gray-400 hover:text-white hover:bg-dark-hover'
+                            ? 'nav-active text-accent-cyan'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
                           }`}
               >
                 {item.icon}
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium text-sm">{item.label}</span>
               </button>
             ))}
           </nav>
 
           {/* User */}
-          <div className="p-4 border-t border-dark-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white font-medium">{member?.name}</p>
+          <div className="p-4 border-t border-white/5">
+            <div className="flex items-center justify-between glass-card rounded-2xl px-3 py-3">
+              <div className="min-w-0">
+                <p className="text-white font-medium text-sm truncate">{member?.name}</p>
                 <p className="text-xs text-gray-500 capitalize">{member?.role}</p>
               </div>
               <button
                 onClick={logout}
-                className="p-2 hover:bg-dark-hover rounded-lg transition-colors"
+                className="p-2 hover:bg-white/5 rounded-xl transition-colors shrink-0"
                 title="Sign out"
               >
-                <LogOut className="w-5 h-5 text-gray-400" />
+                <LogOut className="w-4 h-4 text-gray-400 hover:text-white" />
               </button>
             </div>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden">
+        <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
           {/* Mobile Header */}
-          <header className="md:hidden h-14 px-4 bg-dark-card border-b border-dark-border flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-accent-cyan" />
-              <span className="font-bold text-white">YFM</span>
+          <header className="md:hidden h-14 px-4 glass border-b border-white/5 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2.5">
+              <img src={yfmLogo} alt="YFM" className="w-8 h-8 rounded-lg object-cover" />
+              <span className="font-bold text-white tracking-tight">YFM</span>
             </div>
             <div className="text-right">
-              <p className="text-sm text-white">{member?.name}</p>
+              <p className="text-sm text-white font-medium">{member?.name}</p>
               <p className="text-xs text-gray-500 capitalize">{member?.role}</p>
             </div>
           </header>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden">
+          <div key={activeTab} className="flex-1 overflow-hidden tab-content-enter">
             {renderContent()}
           </div>
 
           {/* Mobile Bottom Navigation */}
-          <nav className="md:hidden bg-dark-card border-t border-dark-border px-2 py-2 safe-area-pb shrink-0">
-            <div className="bottom-nav-scroll flex gap-1">
+          <nav className="md:hidden glass border-t border-white/5 px-2 py-2 safe-area-pb shrink-0">
+            <div className="bottom-nav-scroll flex gap-0.5">
               {filteredNav.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setShowMoreMenu(false);
-                  }}
-                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors shrink-0 min-w-[56px]
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all shrink-0 min-w-[52px]
                             ${isNavActive(item.id)
-                              ? 'text-accent-cyan'
+                              ? 'text-accent-cyan bg-accent-cyan/10'
                               : 'text-gray-500'
                             }`}
                 >

@@ -28,7 +28,7 @@ export function getLoginErrorInfo(
     case 'network':
       return {
         title: 'Cannot reach server',
-        hint: 'The app could not connect to the database. Check your internet and try again.',
+        hint: 'Supabase may be paused or offline. Open supabase.com → your project → Restore project if prompted, then try again.',
       };
     case 'config':
       return {

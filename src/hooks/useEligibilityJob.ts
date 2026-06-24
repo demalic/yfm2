@@ -4,6 +4,7 @@ import {
   cancelEligibilityJob,
   createEmptyJob,
   fetchEligibilityJob,
+  retryQualifierJob,
   startEligibilityJob,
   TowerApiError,
 } from '../lib/towerApi';
@@ -16,6 +17,7 @@ interface UseEligibilityJobResult {
   isPolling: boolean;
   error: string | null;
   startJob: (request: StartEligibilityJobRequest) => Promise<void>;
+  retryQualifier: () => Promise<void>;
   cancelJob: () => Promise<void>;
   reset: () => void;
 }
@@ -83,6 +85,23 @@ export function useEligibilityJob(): UseEligibilityJobResult {
     }
   }, [startPolling, stopPolling]);
 
+  const retryQualifier = useCallback(async () => {
+    if (!job?.jobId) return;
+    setIsStarting(true);
+    setError(null);
+
+    try {
+      const updated = await retryQualifierJob(job.jobId);
+      setJob(updated);
+      startPolling(job.jobId);
+    } catch (err) {
+      const message = err instanceof TowerApiError ? err.message : 'Failed to retry qualifier';
+      setError(message);
+    } finally {
+      setIsStarting(false);
+    }
+  }, [job?.jobId, startPolling]);
+
   const cancelJob = useCallback(async () => {
     if (!job?.jobId) return;
     try {
@@ -103,5 +122,5 @@ export function useEligibilityJob(): UseEligibilityJobResult {
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  return { job, isStarting, isPolling, error, startJob, cancelJob, reset };
+  return { job, isStarting, isPolling, error, startJob, retryQualifier, cancelJob, reset };
 }
