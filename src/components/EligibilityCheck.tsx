@@ -19,7 +19,7 @@ import { useJobLogs } from '../hooks/useJobLogs';
 import { usePendingQualifierJobs } from '../hooks/usePendingQualifierJobs';
 import { useTowerHealth } from '../hooks/useTowerHealth';
 import { useToast } from '../hooks/useToast';
-import { getDownloadUrl, getTowerApiUrl, isTowerConfigured } from '../lib/towerApi';
+import { getDownloadUrl, getTowerApiUrl, isTowerConfigured, TOWER_OUTDATED_MESSAGE } from '../lib/towerApi';
 import type { EligibilityJob, EligibilityCountKey, PendingQualifierJob, PhaseStatus, StartEligibilityJobRequest } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import { JobTerminal } from './JobTerminal';
@@ -153,6 +153,12 @@ export function EligibilityCheck() {
     [pendingJobs, resumeJobId]
   );
   const isResumeMode = Boolean(selectedPending);
+  const showOutdatedTowerHint = Boolean(
+    towerConfigured &&
+      towerOnline &&
+      !isPendingLoading &&
+      (!towerSupportsPending || pendingError === TOWER_OUTDATED_MESSAGE)
+  );
 
   useEffect(() => {
     if (towerOnline) {
@@ -465,12 +471,8 @@ export function EligibilityCheck() {
               {towerConfigured && towerOnline && isPendingLoading && (
                 <p className="text-xs text-gray-500 mt-2">Loading logged zipchecks…</p>
               )}
-              {towerConfigured && towerOnline && !isPendingLoading && !towerSupportsPending && (
-                <p className="text-xs text-amber-300 mt-2">
-                  Tower API is outdated — sync{' '}
-                  <code className="text-amber-100">tower-server</code> to Drive and restart{' '}
-                  <code className="text-amber-100">python main.py</code> to use logged zipchecks.
-                </p>
+              {showOutdatedTowerHint && (
+                <p className="text-xs text-amber-300 mt-2">{TOWER_OUTDATED_MESSAGE}</p>
               )}
               {towerConfigured &&
                 towerOnline &&
@@ -482,7 +484,7 @@ export function EligibilityCheck() {
                     No logged zipchecks waiting for qualifier — enter a new ZIP to run the full pipeline.
                   </p>
                 )}
-              {towerOnline && pendingError && !showLoggedOfflineHint && (
+              {towerOnline && pendingError && !showLoggedOfflineHint && !showOutdatedTowerHint && (
                 <p className="text-xs text-amber-300 mt-2">{pendingError}</p>
               )}
             </div>

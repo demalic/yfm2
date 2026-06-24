@@ -2,6 +2,9 @@ import type { EligibilityJob, JobLogsResponse, PendingQualifierJob, StartEligibi
 
 const TOWER_API_URL = import.meta.env.VITE_TOWER_API_URL?.replace(/\/$/, '') ?? '';
 
+export const TOWER_OUTDATED_MESSAGE =
+  'Tower API is outdated — sync tower-server to Drive and restart python main.py.';
+
 export function isTowerConfigured(): boolean {
   return Boolean(TOWER_API_URL);
 }
@@ -107,10 +110,7 @@ export async function fetchPendingQualifierJobs(): Promise<PendingQualifierJob[]
     return data.jobs ?? [];
   } catch (err) {
     if (err instanceof TowerApiError && err.status === 404) {
-      throw new TowerApiError(
-        'Tower API is outdated — sync tower-server from GitHub/Drive and restart python main.py.',
-        err.status
-      );
+      throw new TowerApiError(TOWER_OUTDATED_MESSAGE, err.status);
     }
     throw err;
   }
