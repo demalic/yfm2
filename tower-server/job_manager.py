@@ -401,7 +401,7 @@ class JobManager:
         job.completedAt = _utc_now()
         job.downloads = {
             key: f"/api/jobs/{job.jobId}/download/{key}"
-            for key in ("eligible", "notEligible", "existingCustomer", "futureFiber", "all")
+            for key in ("eligible", "notEligible", "existingCopper", "existingFiber", "futureFiber", "all")
         }
 
     def _append_log(self, job_id: str, line: str, job_dir: Path | None = None) -> None:

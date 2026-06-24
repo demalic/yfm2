@@ -29,12 +29,13 @@ CORS_ORIGINS = [
 ]
 
 ZIPCHECK_SCRIPT = BOT_DIR / "frontier_zipcheck_v2.py"
-QUALIFIER_SCRIPT = BOT_DIR / "frontier_checker53.py"
+QUALIFIER_SCRIPT = BOT_DIR / "frontier_checker60.py"
 
 COUNT_FILES = {
     "eligible": "frontier_ELIGIBLE.csv",
     "notEligible": "frontier_NOT_ELIGIBLE.csv",
-    "existingCustomer": "frontier_EXISTING_CUSTOMER.csv",
+    "existingCopper": "frontier_EXISTING_COPPER.csv",
+    "existingFiber": "frontier_EXISTING_FIBER.csv",
     "futureFiber": "frontier_FUTURE_FIBER.csv",
     "skipped": "frontier_SKIPPED.csv",
     "all": "frontier_ALL_RESULTS.csv",

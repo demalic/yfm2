@@ -13,11 +13,12 @@ export interface ISPDefinition {
   statusBuckets: EligibilityStatusBucket[];
 }
 
-/** Frontier output buckets from frontier_checker53.py */
+/** Frontier output buckets from frontier_checker60.py */
 export const FRONTIER_STATUS_BUCKETS: EligibilityStatusBucket[] = [
   { key: 'eligible', label: 'Eligible', description: 'Fiber available, no existing service', color: 'text-green-400', bgColor: 'bg-green-500/15' },
-  { key: 'notEligible', label: 'Not Eligible', description: 'No fiber service available', color: 'text-red-400', bgColor: 'bg-red-500/15' },
-  { key: 'existingCustomer', label: 'Existing Customer', description: 'Active service at address', color: 'text-orange-400', bgColor: 'bg-orange-500/15' },
+  { key: 'notEligible', label: 'Not Eligible', description: 'No fiber or existing copper only', color: 'text-red-400', bgColor: 'bg-red-500/15' },
+  { key: 'existingCopper', label: 'Existing Copper', description: 'Copper customer, fiber available', color: 'text-orange-400', bgColor: 'bg-orange-500/15' },
+  { key: 'existingFiber', label: 'Existing Fiber', description: 'Active fiber customer at address', color: 'text-violet-400', bgColor: 'bg-violet-500/15' },
   { key: 'futureFiber', label: 'Future Fiber', description: 'Copper now, fiber coming', color: 'text-amber-400', bgColor: 'bg-amber-500/15' },
   { key: 'skipped', label: 'Skipped', description: 'Not found or blocked', color: 'text-gray-400', bgColor: 'bg-gray-500/15' },
 ];
@@ -29,7 +30,7 @@ export const ISP_REGISTRY: ISPDefinition[] = [
     enabled: true,
     programs: {
       zipChecker: 'frontier_zipcheck_v2',
-      qualifier: 'frontier_checker53',
+      qualifier: 'frontier_checker60',
     },
     statusBuckets: FRONTIER_STATUS_BUCKETS,
   },

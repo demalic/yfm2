@@ -89,7 +89,8 @@ export type PhaseStatus = 'idle' | 'queued' | 'running' | 'completed' | 'failed'
 export type EligibilityCountKey =
   | 'eligible'
   | 'notEligible'
-  | 'existingCustomer'
+  | 'existingCopper'
+  | 'existingFiber'
   | 'futureFiber'
   | 'skipped';
 
@@ -104,7 +105,8 @@ export interface EligibilityStatusBucket {
 export interface EligibilityCounts {
   eligible: number;
   notEligible: number;
-  existingCustomer: number;
+  existingCopper: number;
+  existingFiber: number;
   futureFiber: number;
   skipped: number;
 }

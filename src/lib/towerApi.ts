@@ -135,7 +135,8 @@ export function createEmptyJob(jobId: string, isp: string, scope: 'zip' | 'state
       counts: {
         eligible: 0,
         notEligible: 0,
-        existingCustomer: 0,
+        existingCopper: 0,
+        existingFiber: 0,
         futureFiber: 0,
         skipped: 0,
       },

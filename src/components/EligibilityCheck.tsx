@@ -473,9 +473,9 @@ export function EligibilityCheck() {
                 )}
               </div>
 
-              {/* Live counts — matches frontier_checker53 buckets */}
+              {/* Live counts — matches frontier_checker60 buckets */}
               {ispConfig && job.qualifier.status !== 'idle' && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 pt-2">
                   {ispConfig.statusBuckets.map((bucket) => {
                     const count = job.qualifier.counts[bucket.key as EligibilityCountKey] ?? 0;
                     return (

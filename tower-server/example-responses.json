@@ -36,7 +36,8 @@
       "counts": {
         "eligible": 0,
         "notEligible": 0,
-        "existingCustomer": 0,
+        "existingCopper": 0,
+        "existingFiber": 0,
         "futureFiber": 0,
         "skipped": 0
       }
@@ -69,7 +70,8 @@
       "counts": {
         "eligible": 412,
         "notEligible": 2891,
-        "existingCustomer": 318,
+        "existingCopper": 201,
+        "existingFiber": 117,
         "futureFiber": 156,
         "skipped": 55
       }
@@ -102,7 +104,8 @@
       "counts": {
         "eligible": 1247,
         "notEligible": 8103,
-        "existingCustomer": 892,
+        "existingCopper": 534,
+        "existingFiber": 358,
         "futureFiber": 634,
         "skipped": 396
       }
@@ -113,7 +116,8 @@
     "downloads": {
       "eligible": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/eligible",
       "notEligible": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/notEligible",
-      "existingCustomer": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/existingCustomer",
+      "existingCopper": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/existingCopper",
+      "existingFiber": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/existingFiber",
       "futureFiber": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/futureFiber",
       "all": "/api/jobs/550e8400-e29b-41d4-a716-446655440000/download/all"
     }
@@ -127,7 +131,8 @@
   "frontierCountMapping": {
     "eligible": "frontier_ELIGIBLE.csv — FIBER + no existing service",
     "notEligible": "frontier_NOT_ELIGIBLE.csv",
-    "existingCustomer": "frontier_EXISTING_CUSTOMER.csv — addressHasExistingService or INCUMBENT",
+    "existingCopper": "frontier_EXISTING_COPPER.csv — copper customer, fiber available",
+    "existingFiber": "frontier_EXISTING_FIBER.csv — active fiber customer",
     "futureFiber": "frontier_FUTURE_FIBER.csv — copper with future fiber signals",
     "skipped": "frontier_SKIPPED.csv — not found in predictive or blocked after retries"
   }

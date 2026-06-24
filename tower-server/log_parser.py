@@ -32,7 +32,8 @@ CHECKER_PROGRESS_RE = re.compile(r"── Progress:\s+(\d+)/(\d+)\s+──")
 CHECKER_COUNT_RE = {
     "eligible": re.compile(r"Eligible:\s+(\d+)"),
     "futureFiber": re.compile(r"Future Fiber:\s+(\d+)"),
-    "existingCustomer": re.compile(r"Existing:\s+(\d+)"),
+    "existingCopper": re.compile(r"Existing Copper:\s+(\d+)"),
+    "existingFiber": re.compile(r"Existing Fiber:\s+(\d+)"),
     "notEligible": re.compile(r"Not Eligible:\s+(\d+)"),
     "skipped": re.compile(r"Skipped:\s+(\d+)"),
 }

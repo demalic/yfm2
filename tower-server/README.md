@@ -19,7 +19,7 @@ See `example-responses.json` for the exact JSON shape the website expects.
 - Python 3.11+ with the same packages your bot scripts need (`pandas`, `requests`, `selenium`, `undetected-chromedriver`, etc.)
 - Scripts at `G:\My Drive\bot\`:
   - `frontier_zipcheck_v2.py`
-  - `frontier_checker53.py`
+  - `frontier_checker60.py`
 - Chrome + Mullvad (optional, checker uses VPN rotation)
 
 ## Setup

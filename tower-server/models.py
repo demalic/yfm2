@@ -11,7 +11,8 @@ EligibilityScope = Literal["zip", "state"]
 EligibilityCountKey = Literal[
     "eligible",
     "notEligible",
-    "existingCustomer",
+    "existingCopper",
+    "existingFiber",
     "futureFiber",
     "skipped",
 ]
@@ -20,7 +21,8 @@ EligibilityCountKey = Literal[
 class EligibilityCounts(BaseModel):
     eligible: int = 0
     notEligible: int = 0
-    existingCustomer: int = 0
+    existingCopper: int = 0
+    existingFiber: int = 0
     futureFiber: int = 0
     skipped: int = 0
 
