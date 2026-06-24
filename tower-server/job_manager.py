@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -11,9 +12,10 @@ from typing import Callable
 
 from config import BOT_DIR, COUNT_FILES, JOBS_DIR, QUALIFIER_SCRIPT, TOWER_PYTHON, ZIPCHECK_SCRIPT
 from log_parser import QualifierParseState, ZipCheckParseState, parse_qualifier_line, parse_zipcheck_line
-from models import EligibilityCounts, EligibilityJob, QualifierPhase, ZipCheckPhase
+from models import EligibilityCounts, EligibilityJob, PendingQualifierJob, QualifierPhase, ZipCheckPhase
 
 MAX_LOG_LINES = 10_000
+_ZIPCHECK_CSV_RE = re.compile(r"^zipcheck_(\d{5})\.csv$", re.IGNORECASE)
 
 
 def _utc_now() -> str:
@@ -61,7 +63,42 @@ class JobManager:
     def get_job(self, job_id: str) -> EligibilityJob | None:
         with self._lock:
             job = self._jobs.get(job_id)
-            return job.model_copy(deep=True) if job else None
+            if job:
+                return job.model_copy(deep=True)
+
+        restored = self._restore_job_from_disk(job_id)
+        if restored:
+            with self._lock:
+                self._jobs[job_id] = restored
+            return restored.model_copy(deep=True)
+        return None
+
+    def list_pending_qualifier(self) -> list[PendingQualifierJob]:
+        pending: list[PendingQualifierJob] = []
+        seen: set[str] = set()
+
+        with self._lock:
+            for job_id, job in self._jobs.items():
+                if self._is_pending_qualifier_job(job):
+                    entry = self._pending_from_job(job)
+                    if entry:
+                        pending.append(entry)
+                        seen.add(job_id)
+
+        if not JOBS_DIR.exists():
+            return sorted(pending, key=lambda item: item.createdAt, reverse=True)
+
+        for job_dir in JOBS_DIR.iterdir():
+            if not job_dir.is_dir():
+                continue
+            job_id = job_dir.name
+            if job_id in seen:
+                continue
+            entry = self._pending_from_disk(job_dir)
+            if entry:
+                pending.append(entry)
+
+        return sorted(pending, key=lambda item: item.createdAt, reverse=True)
 
     def start_job(
         self,
@@ -108,6 +145,17 @@ class JobManager:
         return job.model_copy(deep=True)
 
     def retry_qualifier(self, job_id: str) -> EligibilityJob:
+        with self._lock:
+            job = self._jobs.get(job_id)
+
+        if not job:
+            restored = self._restore_job_from_disk(job_id)
+            if not restored:
+                raise KeyError("Job not found")
+            with self._lock:
+                self._jobs[job_id] = restored
+                job = restored
+
         with self._lock:
             job = self._jobs.get(job_id)
             if not job:
@@ -194,7 +242,11 @@ class JobManager:
     def get_job_logs(self, job_id: str, offset: int = 0) -> tuple[list[str], int]:
         with self._lock:
             if job_id not in self._jobs:
-                raise KeyError("Job not found")
+                job_dir = JOBS_DIR / job_id
+                if job_dir.is_dir():
+                    self._restore_logs_from_disk(job_id, job_dir)
+                if job_id not in self._jobs:
+                    raise KeyError("Job not found")
             logs = self._job_logs.get(job_id, [])
             safe_offset = max(0, min(offset, len(logs)))
             return logs[safe_offset:], len(logs)
@@ -232,6 +284,228 @@ class JobManager:
         if not csv_name:
             raise ValueError("Job has no zip checker output CSV")
         return job_dir / csv_name
+
+    def _is_pending_qualifier_job(self, job: EligibilityJob) -> bool:
+        if job.scope != "zip" or not job.zip:
+            return False
+        if job.status in ("running", "queued", "completed"):
+            return False
+        if job.zipcheck.status != "completed":
+            return False
+        return job.qualifier.status != "completed"
+
+    def _pending_from_job(self, job: EligibilityJob) -> PendingQualifierJob | None:
+        if not self._is_pending_qualifier_job(job) or not job.zip:
+            return None
+
+        qualifier_state: str = "not_started"
+        if job.qualifier.status == "failed":
+            qualifier_state = "failed"
+        elif job.qualifier.current > 0:
+            qualifier_state = "partial"
+
+        csv_name = job.zipcheck.outputCsv or f"zipcheck_{job.zip}.csv"
+        return PendingQualifierJob(
+            jobId=job.jobId,
+            zip=job.zip,
+            addressCount=job.zipcheck.addressCount,
+            csvFileName=csv_name,
+            qualifierState=qualifier_state,  # type: ignore[arg-type]
+            qualifierProgress=job.qualifier.progress,
+            qualifierCurrent=job.qualifier.current,
+            createdAt=job.createdAt,
+        )
+
+    def _pending_from_disk(self, job_dir: Path) -> PendingQualifierJob | None:
+        csv_path = self._find_zipcheck_csv(job_dir)
+        if not csv_path:
+            return None
+
+        zip_match = _ZIPCHECK_CSV_RE.match(csv_path.name)
+        if not zip_match:
+            return None
+
+        zip_code = zip_match.group(1)
+        out_dir = job_dir / csv_path.stem
+        if self._qualifier_is_complete(out_dir):
+            return None
+
+        address_count = self._count_csv_rows(csv_path)
+        qualifier_state, qualifier_progress, qualifier_current = self._infer_qualifier_state(
+            out_dir, address_count
+        )
+
+        created_at = datetime.fromtimestamp(job_dir.stat().st_mtime, tz=timezone.utc).isoformat().replace(
+            "+00:00", "Z"
+        )
+
+        return PendingQualifierJob(
+            jobId=job_dir.name,
+            zip=zip_code,
+            addressCount=address_count,
+            csvFileName=csv_path.name,
+            qualifierState=qualifier_state,  # type: ignore[arg-type]
+            qualifierProgress=qualifier_progress,
+            qualifierCurrent=qualifier_current,
+            createdAt=created_at,
+        )
+
+    def _restore_job_from_disk(self, job_id: str) -> EligibilityJob | None:
+        job_dir = JOBS_DIR / job_id
+        if not job_dir.is_dir():
+            return None
+
+        csv_path = self._find_zipcheck_csv(job_dir)
+        if not csv_path or not csv_path.exists():
+            return None
+
+        zip_match = _ZIPCHECK_CSV_RE.match(csv_path.name)
+        zip_code = zip_match.group(1) if zip_match else None
+        address_count = self._count_csv_rows(csv_path)
+        out_dir = job_dir / csv_path.stem
+        qualifier_complete = self._qualifier_is_complete(out_dir)
+        qualifier_state, qualifier_progress, qualifier_current = self._infer_qualifier_state(
+            out_dir, address_count
+        )
+
+        created_at = datetime.fromtimestamp(job_dir.stat().st_mtime, tz=timezone.utc).isoformat().replace(
+            "+00:00", "Z"
+        )
+
+        self._restore_logs_from_disk(job_id, job_dir)
+
+        if qualifier_complete:
+            job = EligibilityJob(
+                jobId=job_id,
+                isp="frontier",
+                scope="zip",
+                zip=zip_code,
+                state=None,
+                status="completed",
+                phase="done",
+                createdAt=created_at,
+                completedAt=created_at,
+                error=None,
+                inputCsvPath=str(csv_path),
+                qualifierOutputDir=str(out_dir),
+                zipcheck=ZipCheckPhase(
+                    status="completed",
+                    progress=100,
+                    message="Zip checker complete",
+                    addressCount=address_count,
+                    outputCsv=csv_path.name,
+                ),
+                qualifier=QualifierPhase(
+                    status="completed",
+                    progress=100,
+                    current=address_count or qualifier_current,
+                    total=address_count or qualifier_current,
+                    message="Qualifier complete",
+                ),
+                downloads={
+                    key: f"/api/jobs/{job_id}/download/{key}"
+                    for key in ("eligible", "notEligible", "existingCopper", "existingFiber", "futureFiber", "all")
+                },
+            )
+            return job
+
+        qualifier_status: str = "idle"
+        if qualifier_state == "failed":
+            qualifier_status = "failed"
+        elif qualifier_state == "partial":
+            qualifier_status = "failed"
+
+        job_status: str = "failed"
+        error = None
+        if qualifier_state == "not_started":
+            error = "Zip checker finished — qualifier has not been run yet."
+
+        return EligibilityJob(
+            jobId=job_id,
+            isp="frontier",
+            scope="zip",
+            zip=zip_code,
+            state=None,
+            status=job_status,  # type: ignore[arg-type]
+            phase="qualifier",
+            createdAt=created_at,
+            completedAt=created_at if qualifier_status == "failed" else None,
+            error=error,
+            inputCsvPath=str(csv_path),
+            qualifierOutputDir=str(out_dir),
+            zipcheck=ZipCheckPhase(
+                status="completed",
+                progress=100,
+                message="Zip checker complete",
+                addressCount=address_count,
+                outputCsv=csv_path.name,
+            ),
+            qualifier=QualifierPhase(
+                status=qualifier_status,  # type: ignore[arg-type]
+                progress=qualifier_progress,
+                current=qualifier_current,
+                total=address_count or 0,
+                message=(
+                    "Qualifier not started"
+                    if qualifier_state == "not_started"
+                    else f"Qualifier stopped at row {qualifier_current:,}"
+                    if qualifier_state == "partial"
+                    else "Qualifier failed"
+                ),
+            ),
+        )
+
+    def _find_zipcheck_csv(self, job_dir: Path) -> Path | None:
+        matches = sorted(job_dir.glob("zipcheck_*.csv"), key=lambda path: path.stat().st_mtime, reverse=True)
+        for path in matches:
+            if _ZIPCHECK_CSV_RE.match(path.name):
+                return path
+        return None
+
+    def _qualifier_is_complete(self, out_dir: Path) -> bool:
+        return (out_dir / COUNT_FILES["all"]).exists()
+
+    def _infer_qualifier_state(
+        self, out_dir: Path, address_count: int | None
+    ) -> tuple[str, int, int]:
+        if not out_dir.exists() or not any(out_dir.glob("frontier_*.csv")):
+            return "not_started", 0, 0
+
+        processed = 0
+        for file_name in COUNT_FILES.values():
+            if file_name == COUNT_FILES["all"]:
+                continue
+            bucket_path = out_dir / file_name
+            if bucket_path.exists():
+                processed += max(0, self._count_csv_rows(bucket_path) or 0)
+
+        total = address_count or 0
+        progress = round(processed / total * 100) if total > 0 else 0
+        return "partial", min(100, progress), processed
+
+    def _count_csv_rows(self, path: Path) -> int | None:
+        try:
+            with path.open("r", encoding="utf-8", errors="replace") as handle:
+                line_count = sum(1 for _ in handle)
+            return max(0, line_count - 1)
+        except OSError:
+            return None
+
+    def _restore_logs_from_disk(self, job_id: str, job_dir: Path) -> None:
+        log_path = job_dir / "run.log"
+        if not log_path.exists():
+            return
+        with self._lock:
+            if self._job_logs.get(job_id):
+                return
+            try:
+                text = log_path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                return
+            lines = text.splitlines()
+            if len(lines) > MAX_LOG_LINES:
+                lines = lines[-MAX_LOG_LINES:]
+            self._job_logs[job_id] = lines
 
     def _run_qualifier_only(
         self,

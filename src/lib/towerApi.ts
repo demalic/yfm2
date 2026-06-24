@@ -1,4 +1,4 @@
-import type { EligibilityJob, JobLogsResponse, StartEligibilityJobRequest, TowerHealthResponse, TowerISPInfo } from '../types';
+import type { EligibilityJob, JobLogsResponse, PendingQualifierJob, StartEligibilityJobRequest, TowerHealthResponse, TowerISPInfo } from '../types';
 
 const TOWER_API_URL = import.meta.env.VITE_TOWER_API_URL?.replace(/\/$/, '') ?? '';
 
@@ -72,6 +72,9 @@ async function towerFetch<T>(path: string, init?: RequestInit): Promise<T> {
  *
  * POST /api/jobs/:jobId/retry-qualifier
  *   → EligibilityJob (re-run qualifier only, reuse zip checker CSV)
+ *
+ * GET /api/jobs/pending-qualifier
+ *   → { jobs: PendingQualifierJob[] } (zipcheck done, qualifier not finished)
  */
 export async function startEligibilityJob(
   request: StartEligibilityJobRequest
@@ -96,6 +99,11 @@ export async function cancelEligibilityJob(jobId: string): Promise<void> {
 
 export async function retryQualifierJob(jobId: string): Promise<EligibilityJob> {
   return towerFetch(`/api/jobs/${jobId}/retry-qualifier`, { method: 'POST' });
+}
+
+export async function fetchPendingQualifierJobs(): Promise<PendingQualifierJob[]> {
+  const data = await towerFetch<{ jobs: PendingQualifierJob[] }>('/api/jobs/pending-qualifier');
+  return data.jobs;
 }
 
 export async function fetchTowerISPs(): Promise<TowerISPInfo[]> {

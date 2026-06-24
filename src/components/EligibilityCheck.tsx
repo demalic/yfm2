@@ -15,10 +15,11 @@ import { US_STATES } from '../constants/usStates';
 import { getISP, ISP_REGISTRY } from '../constants/isps';
 import { useEligibilityJob } from '../hooks/useEligibilityJob';
 import { useJobLogs } from '../hooks/useJobLogs';
+import { usePendingQualifierJobs } from '../hooks/usePendingQualifierJobs';
 import { useTowerHealth } from '../hooks/useTowerHealth';
 import { useToast } from '../hooks/useToast';
 import { getDownloadUrl, getTowerApiUrl, isTowerConfigured } from '../lib/towerApi';
-import type { EligibilityJob, EligibilityCountKey, PhaseStatus, StartEligibilityJobRequest } from '../types';
+import type { EligibilityJob, EligibilityCountKey, PendingQualifierJob, PhaseStatus, StartEligibilityJobRequest } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import { JobTerminal } from './JobTerminal';
 import { TowerStatusBadge } from './TowerStatusBadge';
@@ -98,9 +99,25 @@ function buildJobRequest(job: EligibilityJob): StartEligibilityJobRequest {
   };
 }
 
+function formatPendingLabel(entry: PendingQualifierJob): string {
+  const count =
+    entry.addressCount != null
+      ? `${entry.addressCount.toLocaleString()} addresses`
+      : 'address count unknown';
+
+  if (entry.qualifierState === 'not_started') {
+    return `ZIP ${entry.zip} — zipcheck done, qualifier not run (${count})`;
+  }
+  if (entry.qualifierState === 'partial') {
+    return `ZIP ${entry.zip} — stopped at ${entry.qualifierCurrent.toLocaleString()} / ${entry.addressCount?.toLocaleString() ?? '?'} (${count})`;
+  }
+  return `ZIP ${entry.zip} — qualifier failed (${count})`;
+}
+
 export function EligibilityCheck() {
   const { showToast } = useToast();
-  const { job, isStarting, isPolling, error, startJob, retryQualifier, cancelJob, reset } = useEligibilityJob();
+  const { job, isStarting, isPolling, error, startJob, loadJob, retryQualifier, cancelJob, reset } =
+    useEligibilityJob();
   const logsActive = Boolean(job && (job.status === 'queued' || job.status === 'running'));
   const {
     lines: logLines,
@@ -113,6 +130,7 @@ export function EligibilityCheck() {
   const [scope, setScope] = useState<'zip' | 'state'>('zip');
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
+  const [resumeJobId, setResumeJobId] = useState('');
   const [retryMode, setRetryMode] = useState<'qualifier' | 'full' | null>(null);
 
   const ispConfig = getISP(selectedIsp);
@@ -120,8 +138,19 @@ export function EligibilityCheck() {
   const towerConfigured = isTowerConfigured();
   const { status: towerStatus, refresh: refreshTowerHealth } = useTowerHealth();
   const towerOnline = towerStatus === 'online';
+  const {
+    jobs: pendingJobs,
+    isLoading: isPendingLoading,
+    error: pendingError,
+    refresh: refreshPendingJobs,
+  } = usePendingQualifierJobs(towerConfigured && towerOnline && scope === 'zip');
   const [isRefreshingTower, setIsRefreshingTower] = useState(false);
   const jobFilePaths = useMemo(() => (job ? resolveJobFilePaths(job) : null), [job]);
+  const selectedPending = useMemo(
+    () => pendingJobs.find((entry) => entry.jobId === resumeJobId) ?? null,
+    [pendingJobs, resumeJobId]
+  );
+  const isResumeMode = Boolean(selectedPending);
 
   const handleRefreshTower = async () => {
     setIsRefreshingTower(true);
@@ -134,9 +163,19 @@ export function EligibilityCheck() {
 
   const canRun = useMemo(() => {
     if (!ispConfig?.enabled || isRunning) return false;
+    if (isResumeMode) return false;
     if (scope === 'zip') return /^\d{5}$/.test(zip.trim());
     return Boolean(selectedState);
-  }, [ispConfig?.enabled, isRunning, scope, zip, selectedState]);
+  }, [ispConfig?.enabled, isRunning, isResumeMode, scope, zip, selectedState]);
+
+  const canRunQualifierFromDropdown = Boolean(
+    isResumeMode &&
+      towerOnline &&
+      !isRunning &&
+      job?.jobId === resumeJobId &&
+      job.zipcheck.status === 'completed' &&
+      job.status !== 'completed'
+  );
 
   const canRetry = Boolean(
     !isRunning &&
@@ -162,6 +201,29 @@ export function EligibilityCheck() {
       scope,
       ...(scope === 'zip' ? { zip: zip.trim() } : { state: selectedState }),
     });
+    await refreshPendingJobs();
+  };
+
+  const handleResumeSelection = async (jobId: string) => {
+    setResumeJobId(jobId);
+    if (!jobId) {
+      resetLogs();
+      reset();
+      return;
+    }
+
+    const pending = pendingJobs.find((entry) => entry.jobId === jobId);
+    if (pending) {
+      setZip(pending.zip);
+    }
+
+    resetLogs();
+    await loadJob(jobId);
+  };
+
+  const handleRunQualifier = () => {
+    if (!canRunQualifierFromDropdown) return;
+    setRetryMode('qualifier');
   };
 
   const handleRetryConfirm = async () => {
@@ -171,6 +233,7 @@ export function EligibilityCheck() {
     if (retryMode === 'qualifier') {
       await retryQualifier();
       showToast('Qualifier restarted — zip checker skipped', 'info');
+      await refreshPendingJobs();
       return;
     }
 
@@ -295,7 +358,10 @@ export function EligibilityCheck() {
               {(['zip', 'state'] as const).map((s) => (
                 <button
                   key={s}
-                  onClick={() => setScope(s)}
+                  onClick={() => {
+                    setScope(s);
+                    if (s === 'state') setResumeJobId('');
+                  }}
                   disabled={isRunning}
                   className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors
                             ${scope === s
@@ -311,18 +377,68 @@ export function EligibilityCheck() {
 
           {/* Input */}
           {scope === 'zip' ? (
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={5}
-              value={zip}
-              onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
-              placeholder="Enter 5-digit ZIP code"
-              disabled={isRunning}
-              className="w-full bg-dark-card border border-dark-border rounded-xl px-4 py-3
-                       text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan
-                       disabled:opacity-50"
-            />
+            <div className="space-y-3">
+              {towerOnline && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                    Resume zipcheck complete
+                  </label>
+                  <select
+                    value={resumeJobId}
+                    onChange={(e) => void handleResumeSelection(e.target.value)}
+                    disabled={isRunning}
+                    className="w-full bg-dark-card border border-dark-border rounded-xl px-4 py-3
+                             text-white focus:outline-none focus:border-accent-cyan disabled:opacity-50"
+                  >
+                    <option value="">Enter a new ZIP below</option>
+                    {pendingJobs.map((entry) => (
+                      <option key={entry.jobId} value={entry.jobId}>
+                        {formatPendingLabel(entry)}
+                      </option>
+                    ))}
+                  </select>
+                  {isPendingLoading && (
+                    <p className="text-xs text-gray-500 mt-2">Loading pending ZIPs from tower…</p>
+                  )}
+                  {!isPendingLoading && pendingJobs.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      No ZIPs waiting for qualifier — run zip checker first, or pick a new ZIP.
+                    </p>
+                  )}
+                  {pendingError && (
+                    <p className="text-xs text-amber-300 mt-2">{pendingError}</p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                  {isResumeMode ? 'Selected ZIP' : 'ZIP code'}
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  value={zip}
+                  onChange={(e) => {
+                    setResumeJobId('');
+                    setZip(e.target.value.replace(/\D/g, '').slice(0, 5));
+                  }}
+                  placeholder="Enter 5-digit ZIP code"
+                  disabled={isRunning || isResumeMode}
+                  className="w-full bg-dark-card border border-dark-border rounded-xl px-4 py-3
+                           text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan
+                           disabled:opacity-50"
+                />
+                {isResumeMode && selectedPending && (
+                  <p className="text-xs text-accent-cyan/80 mt-2">
+                    Reuses tower file{' '}
+                    <code className="font-mono">{selectedPending.csvFileName}</code> from job{' '}
+                    {selectedPending.jobId.slice(0, 8)}…
+                  </p>
+                )}
+              </div>
+            </div>
           ) : (
             <select
               value={selectedState}
@@ -340,23 +456,43 @@ export function EligibilityCheck() {
 
           {/* Actions */}
           <div className="flex gap-2">
-            <button
-              onClick={handleRun}
-              disabled={!canRun || !towerOnline}
-              className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
-                       hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
-                       flex items-center justify-center gap-2
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isStarting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Play className="w-5 h-5" />
-                  <span>Run Pipeline</span>
-                </>
-              )}
-            </button>
+            {canRunQualifierFromDropdown ? (
+              <button
+                onClick={handleRunQualifier}
+                disabled={!towerOnline}
+                className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
+                         hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
+                         flex items-center justify-center gap-2
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isStarting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw className="w-5 h-5" />
+                    <span>Run Qualifier</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handleRun}
+                disabled={!canRun || !towerOnline}
+                className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
+                         hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
+                         flex items-center justify-center gap-2
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isStarting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Play className="w-5 h-5" />
+                    <span>Run Pipeline</span>
+                  </>
+                )}
+              </button>
+            )}
 
             {canRetryQualifier && (
               <button
@@ -391,6 +527,7 @@ export function EligibilityCheck() {
                 onClick={() => {
                   resetLogs();
                   reset();
+                  setResumeJobId('');
                 }}
                 className="px-4 py-3 bg-dark-card border border-dark-border rounded-xl
                          text-gray-400 hover:text-white transition-colors"
@@ -445,8 +582,9 @@ export function EligibilityCheck() {
                   <h3 className="font-semibold text-white text-sm">Tower file paths</h3>
                 </div>
                 <p className="text-xs text-gray-500">
-                  Zip checker writes one CSV per job; the qualifier reads that same file (not a shared
-                  bot-folder CSV).
+                  Each job gets its own folder on the tower. Zip checker writes{' '}
+                  <code className="text-gray-400">zipcheck_#####.csv</code> there; retry qualifier
+                  reuses that exact file (same job ID), not a shared bot-folder CSV.
                 </p>
                 <div className="space-y-2 text-xs">
                   <div className="rounded-xl bg-dark-bg/80 border border-dark-border px-3 py-2">

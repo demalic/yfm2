@@ -177,3 +177,16 @@ export interface JobLogsResponse {
   total: number;
   offset: number;
 }
+
+export type PendingQualifierState = 'not_started' | 'partial' | 'failed';
+
+export interface PendingQualifierJob {
+  jobId: string;
+  zip: string;
+  addressCount: number | null;
+  csvFileName: string;
+  qualifierState: PendingQualifierState;
+  qualifierProgress: number;
+  qualifierCurrent: number;
+  createdAt: string;
+}

@@ -88,3 +88,18 @@ class JobLogsResponse(BaseModel):
     lines: list[str]
     total: int
     offset: int
+
+
+class PendingQualifierJob(BaseModel):
+    jobId: str
+    zip: str
+    addressCount: int | None = None
+    csvFileName: str
+    qualifierState: Literal["not_started", "partial", "failed"] = "not_started"
+    qualifierProgress: int = 0
+    qualifierCurrent: int = 0
+    createdAt: str
+
+
+class PendingQualifierListResponse(BaseModel):
+    jobs: list[PendingQualifierJob]

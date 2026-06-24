@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 
 from config import API_KEY, BOT_DIR, CORS_ORIGINS, HOST, PORT, QUALIFIER_SCRIPT, TOWER_PYTHON, ZIPCHECK_SCRIPT
 from job_manager import job_manager
-from models import EligibilityJob, ISPsResponse, JobLogsResponse, StartJobRequest, StartJobResponse, TowerISPInfo
+from models import EligibilityJob, ISPsResponse, JobLogsResponse, PendingQualifierListResponse, StartJobRequest, StartJobResponse, TowerISPInfo
 
 app = FastAPI(title="YFM Tower API", version="1.0.0")
 
@@ -58,6 +58,11 @@ def start_job(body: StartJobRequest, _: None = Depends(require_api_key)) -> Star
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/jobs/pending-qualifier", response_model=PendingQualifierListResponse)
+def list_pending_qualifier(_: None = Depends(require_api_key)) -> PendingQualifierListResponse:
+    return PendingQualifierListResponse(jobs=job_manager.list_pending_qualifier())
 
 
 @app.get("/api/jobs/{job_id}", response_model=EligibilityJob)

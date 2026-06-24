@@ -17,6 +17,7 @@ interface UseEligibilityJobResult {
   isPolling: boolean;
   error: string | null;
   startJob: (request: StartEligibilityJobRequest) => Promise<void>;
+  loadJob: (jobId: string) => Promise<void>;
   retryQualifier: () => Promise<void>;
   cancelJob: () => Promise<void>;
   reset: () => void;
@@ -102,6 +103,26 @@ export function useEligibilityJob(): UseEligibilityJobResult {
     }
   }, [job?.jobId, startPolling]);
 
+  const loadJob = useCallback(async (jobId: string) => {
+    setIsStarting(true);
+    setError(null);
+    stopPolling();
+
+    try {
+      const loaded = await fetchEligibilityJob(jobId);
+      setJob(loaded);
+      if (loaded.status === 'running' || loaded.status === 'queued') {
+        startPolling(jobId);
+      }
+    } catch (err) {
+      const message = err instanceof TowerApiError ? err.message : 'Failed to load job';
+      setError(message);
+      setJob(null);
+    } finally {
+      setIsStarting(false);
+    }
+  }, [startPolling, stopPolling]);
+
   const cancelJob = useCallback(async () => {
     if (!job?.jobId) return;
     try {
@@ -122,5 +143,5 @@ export function useEligibilityJob(): UseEligibilityJobResult {
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  return { job, isStarting, isPolling, error, startJob, retryQualifier, cancelJob, reset };
+  return { job, isStarting, isPolling, error, startJob, loadJob, retryQualifier, cancelJob, reset };
 }
