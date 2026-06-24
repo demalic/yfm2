@@ -102,8 +102,18 @@ export async function retryQualifierJob(jobId: string): Promise<EligibilityJob> 
 }
 
 export async function fetchPendingQualifierJobs(): Promise<PendingQualifierJob[]> {
-  const data = await towerFetch<{ jobs: PendingQualifierJob[] }>('/api/jobs/pending-qualifier');
-  return data.jobs;
+  try {
+    const data = await towerFetch<{ jobs: PendingQualifierJob[] }>('/api/jobs/pending-qualifier');
+    return data.jobs ?? [];
+  } catch (err) {
+    if (err instanceof TowerApiError && err.status === 404) {
+      throw new TowerApiError(
+        'Tower API is outdated — sync tower-server from GitHub/Drive and restart python main.py.',
+        err.status
+      );
+    }
+    throw err;
+  }
 }
 
 export async function fetchTowerISPs(): Promise<TowerISPInfo[]> {

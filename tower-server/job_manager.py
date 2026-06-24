@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -8,13 +9,14 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from config import BOT_DIR, COUNT_FILES, JOBS_DIR, QUALIFIER_SCRIPT, TOWER_PYTHON, ZIPCHECK_SCRIPT
 from log_parser import QualifierParseState, ZipCheckParseState, parse_qualifier_line, parse_zipcheck_line
 from models import EligibilityCounts, EligibilityJob, PendingQualifierJob, QualifierPhase, ZipCheckPhase
 
 MAX_LOG_LINES = 10_000
+JOB_META_FILENAME = "job.meta.json"
 _ZIPCHECK_CSV_RE = re.compile(r"^zipcheck_(\d{5})\.csv$", re.IGNORECASE)
 
 
@@ -59,6 +61,7 @@ class JobManager:
         self._lock = threading.Lock()
         self._processes: dict[str, subprocess.Popen[str]] = {}
         JOBS_DIR.mkdir(parents=True, exist_ok=True)
+        self._backfill_missing_meta_files()
 
     def get_job(self, job_id: str) -> EligibilityJob | None:
         with self._lock:
@@ -94,7 +97,10 @@ class JobManager:
             job_id = job_dir.name
             if job_id in seen:
                 continue
-            entry = self._pending_from_disk(job_dir)
+            try:
+                entry = self._pending_from_disk(job_dir)
+            except OSError:
+                continue
             if entry:
                 pending.append(entry)
 
@@ -326,17 +332,34 @@ class JobManager:
             return None
 
         zip_code = zip_match.group(1)
-        out_dir = job_dir / csv_path.stem
-        if self._qualifier_is_complete(out_dir):
+        if self._qualifier_is_complete(job_dir, csv_path):
             return None
 
-        address_count = self._count_csv_rows(csv_path)
+        meta = self._read_job_meta(job_dir)
+        address_count = meta.get("addressCount") if meta else None
+        if address_count is None:
+            address_count = self._count_csv_rows(csv_path)
         qualifier_state, qualifier_progress, qualifier_current = self._infer_qualifier_state(
-            out_dir, address_count
+            job_dir, csv_path, address_count
         )
 
-        created_at = datetime.fromtimestamp(job_dir.stat().st_mtime, tz=timezone.utc).isoformat().replace(
-            "+00:00", "Z"
+        created_at = meta.get("createdAt") if meta else None
+        if not created_at:
+            created_at = datetime.fromtimestamp(job_dir.stat().st_mtime, tz=timezone.utc).isoformat().replace(
+                "+00:00", "Z"
+            )
+
+        self._write_job_meta(
+            job_dir,
+            {
+                "jobId": job_dir.name,
+                "zip": zip_code,
+                "csvFileName": csv_path.name,
+                "addressCount": address_count,
+                "zipcheckStatus": "completed",
+                "qualifierStatus": qualifier_state,
+                "createdAt": created_at,
+            },
         )
 
         return PendingQualifierJob(
@@ -363,9 +386,9 @@ class JobManager:
         zip_code = zip_match.group(1) if zip_match else None
         address_count = self._count_csv_rows(csv_path)
         out_dir = job_dir / csv_path.stem
-        qualifier_complete = self._qualifier_is_complete(out_dir)
+        qualifier_complete = self._qualifier_is_complete(job_dir, csv_path)
         qualifier_state, qualifier_progress, qualifier_current = self._infer_qualifier_state(
-            out_dir, address_count
+            job_dir, csv_path, address_count
         )
 
         created_at = datetime.fromtimestamp(job_dir.stat().st_mtime, tz=timezone.utc).isoformat().replace(
@@ -456,32 +479,96 @@ class JobManager:
         )
 
     def _find_zipcheck_csv(self, job_dir: Path) -> Path | None:
+        meta = self._read_job_meta(job_dir)
+        if meta:
+            csv_name = meta.get("csvFileName")
+            if isinstance(csv_name, str):
+                meta_path = job_dir / csv_name
+                if meta_path.exists():
+                    return meta_path
+
         matches = sorted(job_dir.glob("zipcheck_*.csv"), key=lambda path: path.stat().st_mtime, reverse=True)
         for path in matches:
             if _ZIPCHECK_CSV_RE.match(path.name):
                 return path
+
+        for path in sorted(job_dir.glob("*.csv"), key=lambda item: item.stat().st_mtime, reverse=True):
+            if not path.name.lower().startswith("frontier_"):
+                return path
         return None
 
-    def _qualifier_is_complete(self, out_dir: Path) -> bool:
-        return (out_dir / COUNT_FILES["all"]).exists()
+    def _qualifier_output_dirs(self, job_dir: Path, csv_path: Path) -> list[Path]:
+        stem = csv_path.stem
+        dirs = [job_dir / stem]
+        bot_output = BOT_DIR / stem
+        if bot_output not in dirs:
+            dirs.append(bot_output)
+        return dirs
+
+    def _qualifier_is_complete(self, job_dir: Path, csv_path: Path) -> bool:
+        for out_dir in self._qualifier_output_dirs(job_dir, csv_path):
+            if (out_dir / COUNT_FILES["all"]).exists():
+                return True
+        return False
 
     def _infer_qualifier_state(
-        self, out_dir: Path, address_count: int | None
+        self, job_dir: Path, csv_path: Path, address_count: int | None
     ) -> tuple[str, int, int]:
-        if not out_dir.exists() or not any(out_dir.glob("frontier_*.csv")):
-            return "not_started", 0, 0
-
         processed = 0
-        for file_name in COUNT_FILES.values():
-            if file_name == COUNT_FILES["all"]:
+        saw_output = False
+
+        for out_dir in self._qualifier_output_dirs(job_dir, csv_path):
+            if not out_dir.exists() or not any(out_dir.glob("frontier_*.csv")):
                 continue
-            bucket_path = out_dir / file_name
-            if bucket_path.exists():
-                processed += max(0, self._count_csv_rows(bucket_path) or 0)
+            saw_output = True
+            for file_name in COUNT_FILES.values():
+                if file_name == COUNT_FILES["all"]:
+                    continue
+                bucket_path = out_dir / file_name
+                if bucket_path.exists():
+                    processed += max(0, self._count_csv_rows(bucket_path) or 0)
+
+        if not saw_output:
+            return "not_started", 0, 0
 
         total = address_count or 0
         progress = round(processed / total * 100) if total > 0 else 0
+        if total > 0 and processed >= total:
+            return "failed", 100, processed
         return "partial", min(100, progress), processed
+
+    def _read_job_meta(self, job_dir: Path) -> dict[str, Any] | None:
+        meta_path = job_dir / JOB_META_FILENAME
+        if not meta_path.exists():
+            return None
+        try:
+            return json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+
+    def _write_job_meta(self, job_dir: Path, meta: dict[str, Any]) -> None:
+        meta_path = job_dir / JOB_META_FILENAME
+        existing = self._read_job_meta(job_dir) or {}
+        existing.update(meta)
+        try:
+            meta_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+        except OSError:
+            return
+
+    def _backfill_missing_meta_files(self) -> None:
+        if not JOBS_DIR.exists():
+            return
+        for job_dir in JOBS_DIR.iterdir():
+            if not job_dir.is_dir():
+                continue
+            if (job_dir / JOB_META_FILENAME).exists():
+                continue
+            self._pending_from_disk(job_dir)
+
+    def count_job_folders(self) -> int:
+        if not JOBS_DIR.exists():
+            return 0
+        return sum(1 for path in JOBS_DIR.iterdir() if path.is_dir())
 
     def _count_csv_rows(self, path: Path) -> int | None:
         try:
@@ -630,6 +717,18 @@ class JobManager:
                 job.qualifier.total = final_count
 
         self._update_job(job_id, complete_zipcheck)
+        self._write_job_meta(
+            job_dir,
+            {
+                "jobId": job_id,
+                "zip": zip_code,
+                "csvFileName": csv_path.name,
+                "addressCount": final_count,
+                "zipcheckStatus": "completed",
+                "qualifierStatus": "not_started",
+                "createdAt": _utc_now(),
+            },
+        )
         return True
 
     def _run_qualifier(self, job_id: str, job_dir: Path, csv_path: Path, start_row: int = 0) -> bool:

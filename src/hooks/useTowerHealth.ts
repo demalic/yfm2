@@ -39,7 +39,12 @@ export function useTowerHealth(): UseTowerHealthResult {
       setHealth((prev) => {
         if (
           prev?.ok === result.ok &&
+          prev?.apiVersion === result.apiVersion &&
+          prev?.features?.pendingQualifier === result.features?.pendingQualifier &&
           prev?.botDir === result.botDir &&
+          prev?.jobsDir === result.jobsDir &&
+          prev?.jobFolderCount === result.jobFolderCount &&
+          prev?.pendingQualifierCount === result.pendingQualifierCount &&
           prev?.python === result.python &&
           prev?.scripts.zipChecker === result.scripts.zipChecker &&
           prev?.scripts.qualifier === result.scripts.qualifier

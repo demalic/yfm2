@@ -164,7 +164,14 @@ export interface TowerISPInfo {
 
 export interface TowerHealthResponse {
   ok: boolean;
+  apiVersion?: string;
+  features?: {
+    pendingQualifier?: boolean;
+  };
   botDir: string;
+  jobsDir?: string;
+  jobFolderCount?: number;
+  pendingQualifierCount?: number;
   python: string;
   scripts: {
     zipChecker: boolean;

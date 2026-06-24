@@ -18,8 +18,6 @@ export function usePendingQualifierJobs(enabled: boolean): UsePendingQualifierJo
 
   const refresh = useCallback(async () => {
     if (!enabled) {
-      setJobs([]);
-      setError(null);
       return;
     }
 

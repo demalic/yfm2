@@ -136,14 +136,18 @@ export function EligibilityCheck() {
   const ispConfig = getISP(selectedIsp);
   const isRunning = isStarting || isPolling || (job?.status === 'running' || job?.status === 'queued');
   const towerConfigured = isTowerConfigured();
-  const { status: towerStatus, refresh: refreshTowerHealth } = useTowerHealth();
+  const { status: towerStatus, health: towerHealth, refresh: refreshTowerHealth } = useTowerHealth();
   const towerOnline = towerStatus === 'online';
+  const towerSupportsPending =
+    towerHealth?.features?.pendingQualifier === true ||
+    towerHealth?.apiVersion === '1.1.0' ||
+    typeof towerHealth?.pendingQualifierCount === 'number';
   const {
     jobs: pendingJobs,
     isLoading: isPendingLoading,
     error: pendingError,
     refresh: refreshPendingJobs,
-  } = usePendingQualifierJobs(towerConfigured && towerOnline && scope === 'zip');
+  } = usePendingQualifierJobs(towerConfigured && scope === 'zip');
   const [isRefreshingTower, setIsRefreshingTower] = useState(false);
   const jobFilePaths = useMemo(() => (job ? resolveJobFilePaths(job) : null), [job]);
   const selectedPending = useMemo(
@@ -156,6 +160,7 @@ export function EligibilityCheck() {
     setIsRefreshingTower(true);
     try {
       await refreshTowerHealth();
+      await refreshPendingJobs();
     } finally {
       setIsRefreshingTower(false);
     }
@@ -297,7 +302,7 @@ export function EligibilityCheck() {
       />
 
       {/* Header */}
-      <div className="page-header shrink-0">
+      <div className="page-header shrink-0 relative z-30 overflow-visible">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -309,6 +314,7 @@ export function EligibilityCheck() {
           <TowerStatusBadge
             status={towerStatus}
             towerUrl={towerConfigured ? getTowerApiUrl() : undefined}
+            health={towerHealth}
             onRefresh={towerConfigured ? handleRefreshTower : undefined}
             isRefreshing={isRefreshingTower}
           />
@@ -378,7 +384,7 @@ export function EligibilityCheck() {
           {/* Input */}
           {scope === 'zip' ? (
             <div className="space-y-3">
-              {towerOnline && (
+              {towerConfigured && (
                 <div>
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                     Resume zipcheck complete
@@ -386,7 +392,7 @@ export function EligibilityCheck() {
                   <select
                     value={resumeJobId}
                     onChange={(e) => void handleResumeSelection(e.target.value)}
-                    disabled={isRunning}
+                    disabled={isRunning || !towerOnline}
                     className="w-full bg-dark-card border border-dark-border rounded-xl px-4 py-3
                              text-white focus:outline-none focus:border-accent-cyan disabled:opacity-50"
                   >
@@ -397,12 +403,38 @@ export function EligibilityCheck() {
                       </option>
                     ))}
                   </select>
-                  {isPendingLoading && (
+                  {!towerOnline && (
+                    <p className="text-xs text-amber-300 mt-2">
+                      Tower offline — reconnect to load pending ZIPs, or use Retry qualifier on a failed job below.
+                    </p>
+                  )}
+                  {towerOnline && isPendingLoading && (
                     <p className="text-xs text-gray-500 mt-2">Loading pending ZIPs from tower…</p>
                   )}
-                  {!isPendingLoading && pendingJobs.length === 0 && (
+                  {towerOnline && !isPendingLoading && !towerSupportsPending && (
+                    <p className="text-xs text-amber-300 mt-2">
+                      Tower API is outdated — copy the latest{' '}
+                      <code className="text-amber-100">tower-server</code> folder to{' '}
+                      <code className="text-amber-100">G:\My Drive\tower-server</code> and restart{' '}
+                      <code className="text-amber-100">python main.py</code>.
+                    </p>
+                  )}
+                  {towerOnline && !isPendingLoading && towerSupportsPending && pendingJobs.length === 0 && (
                     <p className="text-xs text-gray-500 mt-2">
-                      No ZIPs waiting for qualifier — run zip checker first, or pick a new ZIP.
+                      No ZIPs waiting for qualifier
+                      {towerHealth?.jobsDir ? (
+                        <>
+                          {' '}
+                          (tower jobs folder:{' '}
+                          <code className="text-gray-400">{towerHealth.jobsDir}</code>
+                          {typeof towerHealth.jobFolderCount === 'number'
+                            ? `, ${towerHealth.jobFolderCount} job folder(s)`
+                            : ''}
+                          ).
+                        </>
+                      ) : (
+                        ' — run zip checker first, or pick a new ZIP.'
+                      )}
                     </p>
                   )}
                   {pendingError && (

@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from config import API_KEY, BOT_DIR, CORS_ORIGINS, HOST, PORT, QUALIFIER_SCRIPT, TOWER_PYTHON, ZIPCHECK_SCRIPT
+from config import API_KEY, BOT_DIR, CORS_ORIGINS, HOST, JOBS_DIR, PORT, QUALIFIER_SCRIPT, TOWER_PYTHON, ZIPCHECK_SCRIPT
 from job_manager import job_manager
 from models import EligibilityJob, ISPsResponse, JobLogsResponse, PendingQualifierListResponse, StartJobRequest, StartJobResponse, TowerISPInfo
 
@@ -26,9 +26,17 @@ def require_api_key(x_tower_key: str | None = Header(default=None)) -> None:
 
 @app.get("/health")
 def health() -> dict:
+    pending_jobs = job_manager.list_pending_qualifier()
     return {
         "ok": True,
+        "apiVersion": "1.1.0",
+        "features": {
+            "pendingQualifier": True,
+        },
         "botDir": str(BOT_DIR),
+        "jobsDir": str(JOBS_DIR),
+        "jobFolderCount": job_manager.count_job_folders(),
+        "pendingQualifierCount": len(pending_jobs),
         "python": TOWER_PYTHON,
         "scripts": {
             "zipChecker": ZIPCHECK_SCRIPT.exists(),
