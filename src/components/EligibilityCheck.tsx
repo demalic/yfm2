@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -129,6 +129,7 @@ export function EligibilityCheck() {
   const [selectedState, setSelectedState] = useState('');
   const [resumeJobId, setResumeJobId] = useState('');
   const [retryMode, setRetryMode] = useState<'qualifier' | 'full' | null>(null);
+  const [showLoggedOfflineHint, setShowLoggedOfflineHint] = useState(false);
 
   const ispConfig = getISP(selectedIsp);
   const isRunning = isStarting || isPolling || (job?.status === 'running' || job?.status === 'queued');
@@ -152,6 +153,18 @@ export function EligibilityCheck() {
     [pendingJobs, resumeJobId]
   );
   const isResumeMode = Boolean(selectedPending);
+
+  useEffect(() => {
+    if (towerOnline) {
+      setShowLoggedOfflineHint(false);
+    }
+  }, [towerOnline]);
+
+  const handleLoggedOfflineInteract = () => {
+    if (towerOnline || isRunning) return;
+    setShowLoggedOfflineHint(true);
+    void refreshPendingJobs();
+  };
 
   const handleRefreshTower = async () => {
     setIsRefreshingTower(true);
@@ -207,6 +220,12 @@ export function EligibilityCheck() {
   };
 
   const handleResumeSelection = async (jobId: string) => {
+    if (!towerOnline) {
+      setShowLoggedOfflineHint(true);
+      void refreshPendingJobs();
+      return;
+    }
+
     setResumeJobId(jobId);
     if (!jobId) {
       resetLogs();
@@ -407,7 +426,9 @@ export function EligibilityCheck() {
                     <select
                       value={resumeJobId}
                       onChange={(e) => void handleResumeSelection(e.target.value)}
-                      disabled={isRunning || !towerOnline}
+                      onFocus={handleLoggedOfflineInteract}
+                      onMouseDown={handleLoggedOfflineInteract}
+                      disabled={isRunning}
                       aria-label="Load logged zipcheck"
                       className="h-full appearance-none pl-3 pr-9 py-3 bg-transparent text-sm text-gray-300
                                focus:outline-none disabled:opacity-50 cursor-pointer min-w-[7.5rem]"
@@ -435,10 +456,11 @@ export function EligibilityCheck() {
                 </p>
               )}
 
-              {towerConfigured && !towerOnline && (
-                <p className="text-xs text-amber-300 mt-2">
-                  Tower offline — reconnect to load logged zipchecks.
-                </p>
+              {showLoggedOfflineHint && !towerOnline && (
+                <div className="text-xs text-amber-300 mt-2 space-y-1">
+                  <p>Tower offline — reconnect to load logged zipchecks.</p>
+                  <p>{pendingError ?? 'Failed to load pending ZIPs'}</p>
+                </div>
               )}
               {towerConfigured && towerOnline && isPendingLoading && (
                 <p className="text-xs text-gray-500 mt-2">Loading logged zipchecks…</p>
@@ -460,7 +482,7 @@ export function EligibilityCheck() {
                     No logged zipchecks waiting for qualifier — enter a new ZIP to run the full pipeline.
                   </p>
                 )}
-              {pendingError && (
+              {towerOnline && pendingError && !showLoggedOfflineHint && (
                 <p className="text-xs text-amber-300 mt-2">{pendingError}</p>
               )}
             </div>
