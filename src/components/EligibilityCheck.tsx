@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   CheckCircle2,
   Circle,
+  ChevronDown,
   Download,
   FileText,
   Loader2,
@@ -99,19 +100,15 @@ function buildJobRequest(job: EligibilityJob): StartEligibilityJobRequest {
   };
 }
 
-function formatPendingLabel(entry: PendingQualifierJob): string {
-  const count =
-    entry.addressCount != null
-      ? `${entry.addressCount.toLocaleString()} addresses`
-      : 'address count unknown';
-
+function formatPendingShort(entry: PendingQualifierJob): string {
+  const count = entry.addressCount != null ? entry.addressCount.toLocaleString() : '?';
   if (entry.qualifierState === 'not_started') {
-    return `ZIP ${entry.zip} — zipcheck done, qualifier not run (${count})`;
+    return `${entry.zip} · zipcheck done (${count})`;
   }
   if (entry.qualifierState === 'partial') {
-    return `ZIP ${entry.zip} — stopped at ${entry.qualifierCurrent.toLocaleString()} / ${entry.addressCount?.toLocaleString() ?? '?'} (${count})`;
+    return `${entry.zip} · row ${entry.qualifierCurrent.toLocaleString()} / ${count}`;
   }
-  return `ZIP ${entry.zip} — qualifier failed (${count})`;
+  return `${entry.zip} · qualifier failed (${count})`;
 }
 
 export function EligibilityCheck() {
@@ -383,70 +380,14 @@ export function EligibilityCheck() {
 
           {/* Input */}
           {scope === 'zip' ? (
-            <div className="space-y-3">
-              {towerConfigured && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                    Resume zipcheck complete
-                  </label>
-                  <select
-                    value={resumeJobId}
-                    onChange={(e) => void handleResumeSelection(e.target.value)}
-                    disabled={isRunning || !towerOnline}
-                    className="w-full bg-dark-card border border-dark-border rounded-xl px-4 py-3
-                             text-white focus:outline-none focus:border-accent-cyan disabled:opacity-50"
-                  >
-                    <option value="">Enter a new ZIP below</option>
-                    {pendingJobs.map((entry) => (
-                      <option key={entry.jobId} value={entry.jobId}>
-                        {formatPendingLabel(entry)}
-                      </option>
-                    ))}
-                  </select>
-                  {!towerOnline && (
-                    <p className="text-xs text-amber-300 mt-2">
-                      Tower offline — reconnect to load pending ZIPs, or use Retry qualifier on a failed job below.
-                    </p>
-                  )}
-                  {towerOnline && isPendingLoading && (
-                    <p className="text-xs text-gray-500 mt-2">Loading pending ZIPs from tower…</p>
-                  )}
-                  {towerOnline && !isPendingLoading && !towerSupportsPending && (
-                    <p className="text-xs text-amber-300 mt-2">
-                      Tower API is outdated — copy the latest{' '}
-                      <code className="text-amber-100">tower-server</code> folder to{' '}
-                      <code className="text-amber-100">G:\My Drive\tower-server</code> and restart{' '}
-                      <code className="text-amber-100">python main.py</code>.
-                    </p>
-                  )}
-                  {towerOnline && !isPendingLoading && towerSupportsPending && pendingJobs.length === 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      No ZIPs waiting for qualifier
-                      {towerHealth?.jobsDir ? (
-                        <>
-                          {' '}
-                          (tower jobs folder:{' '}
-                          <code className="text-gray-400">{towerHealth.jobsDir}</code>
-                          {typeof towerHealth.jobFolderCount === 'number'
-                            ? `, ${towerHealth.jobFolderCount} job folder(s)`
-                            : ''}
-                          ).
-                        </>
-                      ) : (
-                        ' — run zip checker first, or pick a new ZIP.'
-                      )}
-                    </p>
-                  )}
-                  {pendingError && (
-                    <p className="text-xs text-amber-300 mt-2">{pendingError}</p>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  {isResumeMode ? 'Selected ZIP' : 'ZIP code'}
-                </label>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                ZIP code
+              </label>
+              <div
+                className="flex rounded-xl border border-dark-border bg-dark-card overflow-hidden
+                         focus-within:border-accent-cyan transition-colors"
+              >
                 <input
                   type="text"
                   inputMode="numeric"
@@ -456,20 +397,72 @@ export function EligibilityCheck() {
                     setResumeJobId('');
                     setZip(e.target.value.replace(/\D/g, '').slice(0, 5));
                   }}
-                  placeholder="Enter 5-digit ZIP code"
+                  placeholder="Enter 5-digit ZIP"
                   disabled={isRunning || isResumeMode}
-                  className="w-full bg-dark-card border border-dark-border rounded-xl px-4 py-3
-                           text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan
-                           disabled:opacity-50"
+                  className="flex-1 min-w-0 bg-transparent px-4 py-3 text-white placeholder-gray-500
+                           focus:outline-none disabled:opacity-50"
                 />
-                {isResumeMode && selectedPending && (
-                  <p className="text-xs text-accent-cyan/80 mt-2">
-                    Reuses tower file{' '}
-                    <code className="font-mono">{selectedPending.csvFileName}</code> from job{' '}
-                    {selectedPending.jobId.slice(0, 8)}…
-                  </p>
+                {towerConfigured && (
+                  <div className="relative shrink-0 border-l border-dark-border bg-dark-hover/80">
+                    <select
+                      value={resumeJobId}
+                      onChange={(e) => void handleResumeSelection(e.target.value)}
+                      disabled={isRunning || !towerOnline}
+                      aria-label="Load logged zipcheck"
+                      className="h-full appearance-none pl-3 pr-9 py-3 bg-transparent text-sm text-gray-300
+                               focus:outline-none disabled:opacity-50 cursor-pointer min-w-[7.5rem]"
+                    >
+                      <option value="">Logged</option>
+                      {pendingJobs.map((entry) => (
+                        <option key={entry.jobId} value={entry.jobId}>
+                          {formatPendingShort(entry)}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+                      aria-hidden
+                    />
+                  </div>
                 )}
               </div>
+
+              {isResumeMode && selectedPending && (
+                <p className="text-xs text-accent-cyan/80 mt-2">
+                  Logged zipcheck — reuses{' '}
+                  <code className="font-mono">{selectedPending.csvFileName}</code> (job{' '}
+                  {selectedPending.jobId.slice(0, 8)}…). Run qualifier to continue.
+                </p>
+              )}
+
+              {towerConfigured && !towerOnline && (
+                <p className="text-xs text-amber-300 mt-2">
+                  Tower offline — reconnect to load logged zipchecks.
+                </p>
+              )}
+              {towerConfigured && towerOnline && isPendingLoading && (
+                <p className="text-xs text-gray-500 mt-2">Loading logged zipchecks…</p>
+              )}
+              {towerConfigured && towerOnline && !isPendingLoading && !towerSupportsPending && (
+                <p className="text-xs text-amber-300 mt-2">
+                  Tower API is outdated — sync{' '}
+                  <code className="text-amber-100">tower-server</code> to Drive and restart{' '}
+                  <code className="text-amber-100">python main.py</code> to use logged zipchecks.
+                </p>
+              )}
+              {towerConfigured &&
+                towerOnline &&
+                !isPendingLoading &&
+                towerSupportsPending &&
+                pendingJobs.length === 0 &&
+                !isResumeMode && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    No logged zipchecks waiting for qualifier — enter a new ZIP to run the full pipeline.
+                  </p>
+                )}
+              {pendingError && (
+                <p className="text-xs text-amber-300 mt-2">{pendingError}</p>
+              )}
             </div>
           ) : (
             <select
