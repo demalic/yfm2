@@ -1,4 +1,4 @@
-import type { EligibilityJob, JobLogsResponse, StartEligibilityJobRequest, TowerISPInfo } from '../types';
+import type { EligibilityJob, JobLogsResponse, StartEligibilityJobRequest, TowerHealthResponse, TowerISPInfo } from '../types';
 
 const TOWER_API_URL = import.meta.env.VITE_TOWER_API_URL?.replace(/\/$/, '') ?? '';
 
@@ -8,6 +8,10 @@ export function isTowerConfigured(): boolean {
 
 export function getTowerApiUrl(): string {
   return TOWER_API_URL;
+}
+
+export async function fetchTowerHealth(): Promise<TowerHealthResponse> {
+  return towerFetch('/health');
 }
 
 class TowerApiError extends Error {

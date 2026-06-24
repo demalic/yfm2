@@ -15,11 +15,13 @@ import { US_STATES } from '../constants/usStates';
 import { getISP, ISP_REGISTRY } from '../constants/isps';
 import { useEligibilityJob } from '../hooks/useEligibilityJob';
 import { useJobLogs } from '../hooks/useJobLogs';
+import { useTowerHealth } from '../hooks/useTowerHealth';
 import { useToast } from '../hooks/useToast';
 import { getDownloadUrl, getTowerApiUrl, isTowerConfigured } from '../lib/towerApi';
 import type { EligibilityJob, EligibilityCountKey, PhaseStatus, StartEligibilityJobRequest } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import { JobTerminal } from './JobTerminal';
+import { TowerStatusBadge } from './TowerStatusBadge';
 
 function PhaseProgressBar({ progress, status }: { progress: number; status: PhaseStatus }) {
   const pct = Math.min(100, Math.max(0, progress));
@@ -116,7 +118,19 @@ export function EligibilityCheck() {
   const ispConfig = getISP(selectedIsp);
   const isRunning = isStarting || isPolling || (job?.status === 'running' || job?.status === 'queued');
   const towerConfigured = isTowerConfigured();
+  const { status: towerStatus, refresh: refreshTowerHealth } = useTowerHealth();
+  const towerOnline = towerStatus === 'online';
+  const [isRefreshingTower, setIsRefreshingTower] = useState(false);
   const jobFilePaths = useMemo(() => (job ? resolveJobFilePaths(job) : null), [job]);
+
+  const handleRefreshTower = async () => {
+    setIsRefreshingTower(true);
+    try {
+      await refreshTowerHealth();
+    } finally {
+      setIsRefreshingTower(false);
+    }
+  };
 
   const canRun = useMemo(() => {
     if (!ispConfig?.enabled || isRunning) return false;
@@ -126,7 +140,7 @@ export function EligibilityCheck() {
 
   const canRetry = Boolean(
     !isRunning &&
-      towerConfigured &&
+      towerOnline &&
       job &&
       (job.status === 'failed' || job.status === 'cancelled')
   );
@@ -221,21 +235,41 @@ export function EligibilityCheck() {
 
       {/* Header */}
       <div className="page-header shrink-0">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-accent-cyan" />
-          <h1 className="page-title">Eligibility</h1>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-accent-cyan" />
+              <h1 className="page-title">Eligibility</h1>
+            </div>
+            <p className="page-subtitle">Run zip checker → qualifier pipeline on the tower</p>
+          </div>
+          <TowerStatusBadge
+            status={towerStatus}
+            onRefresh={towerConfigured ? handleRefreshTower : undefined}
+            isRefreshing={isRefreshingTower}
+          />
         </div>
-        <p className="page-subtitle">Run zip checker → qualifier pipeline on the tower</p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* Tower connection warning */}
         {!towerConfigured && (
           <div className="mx-4 mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-            <p className="text-amber-300 font-medium text-sm">Tower not connected</p>
+            <p className="text-amber-300 font-medium text-sm">Tower URL not configured</p>
             <p className="text-amber-200/70 text-xs mt-1">
               Set <code className="text-amber-200">VITE_TOWER_API_URL</code> in your{' '}
-              <code className="text-amber-200">.env</code> file once the tower API is running.
+              <code className="text-amber-200">.env</code> file (or Vercel env vars) to point at the tower API.
+            </p>
+          </div>
+        )}
+
+        {towerConfigured && towerStatus === 'offline' && (
+          <div className="mx-4 mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+            <p className="text-red-300 font-medium text-sm">Tower is offline</p>
+            <p className="text-red-200/70 text-xs mt-1">
+              The API URL is set but the tower is not responding. Start{' '}
+              <code className="text-red-200">python main.py</code> and{' '}
+              <code className="text-red-200">tailscale funnel 8787</code> on the tower PC, then refresh.
             </p>
           </div>
         )}
@@ -318,7 +352,7 @@ export function EligibilityCheck() {
           <div className="flex gap-2">
             <button
               onClick={handleRun}
-              disabled={!canRun || !towerConfigured}
+              disabled={!canRun || !towerOnline}
               className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
                        hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
                        flex items-center justify-center gap-2

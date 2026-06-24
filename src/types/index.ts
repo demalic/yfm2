@@ -162,6 +162,16 @@ export interface TowerISPInfo {
   comingSoon?: boolean;
 }
 
+export interface TowerHealthResponse {
+  ok: boolean;
+  botDir: string;
+  python: string;
+  scripts: {
+    zipChecker: boolean;
+    qualifier: boolean;
+  };
+}
+
 export interface JobLogsResponse {
   lines: string[];
   total: number;
