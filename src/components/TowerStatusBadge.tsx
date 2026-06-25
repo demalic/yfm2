@@ -187,7 +187,7 @@ export function TowerStatusBadge({
                 onClick={handleRefreshClick}
                 disabled={isRefreshing}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold
-                         bg-accent-cyan text-dark-bg hover:bg-accent-cyan/90
+                         bg-accent-cyan text-white hover:bg-accent-cyan/90
                          transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />

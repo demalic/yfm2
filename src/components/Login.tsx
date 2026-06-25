@@ -8,9 +8,11 @@ import {
   getLoginErrorInfo,
   type LoginErrorInfo,
 } from '../lib/loginErrors';
-import { Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, User, ArrowRight } from 'lucide-react';
 import type { Member } from '../types';
-import yfmLogo from '../assets/yfm-logo.jpg';
+import { YfmLogoLogin, YfmLogoTagline } from './YfmLogo';
+import { OpeningBackdrop } from './OpeningBackdrop';
+import { Button, Input, Alert, Card } from './ui';
 
 export function Login() {
   const [name, setName] = useState('');
@@ -78,89 +80,76 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen login-screen relative flex flex-col items-center justify-center p-6 overflow-hidden">
-      <div className="login-grid absolute inset-0 pointer-events-none" aria-hidden />
+    <div className="min-h-screen auth-screen login-screen relative flex flex-col items-center justify-center py-6 px-6 overflow-hidden">
+      <OpeningBackdrop />
 
-      <div className="relative w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <img
-            src={yfmLogo}
-            alt="YFM"
-            className="w-44 h-44 sm:w-52 sm:h-52 mx-auto object-contain logo-glow"
-          />
-          <p className="text-gray-500 text-xs mt-4 tracking-[0.25em] uppercase font-medium">
-            Field Sales Platform
-          </p>
+      {isLoading && (
+        <div
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/30"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <p className="text-sm font-semibold text-white tracking-wide">Signing in…</p>
+        </div>
+      )}
+
+      <div className="relative z-10 w-full max-w-md">
+        <div className="text-center mb-6 sm:mb-7">
+          <YfmLogoLogin />
         </div>
 
-        {/* Form card */}
-        <div className="glass-card rounded-3xl p-6 sm:p-8">
+        <Card variant="glass" padding="lg" className="rounded-3xl">
           <div className="mb-6">
-            <h1 className="text-lg font-semibold text-white">Sign in</h1>
-            <p className="text-sm text-gray-500 mt-1">Enter your team credentials</p>
+            <h1 className="text-xl font-extrabold text-white">Sign in</h1>
+            <p className="text-sm text-gray-400 mt-1 font-medium">Enter your team credentials</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  clearLoginError();
-                }}
-                placeholder="Your name"
-                autoComplete="name"
-                className="input-yfm"
-              />
-            </div>
+            <Input
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                clearLoginError();
+              }}
+              placeholder="Your name"
+              autoComplete="name"
+              icon={<User className="w-5 h-5" />}
+            />
 
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  clearLoginError();
-                }}
-                placeholder="Password"
-                autoComplete="current-password"
-                className="input-yfm"
-              />
-            </div>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearLoginError();
+              }}
+              placeholder="Password"
+              autoComplete="current-password"
+              icon={<Lock className="w-5 h-5" />}
+            />
 
             {loginError && (
-              <div
-                role="alert"
-                className="flex gap-3 rounded-2xl bg-red-500/10 border border-red-500/25 px-4 py-3"
-              >
-                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-red-400 font-semibold text-sm">{loginError.title}</p>
-                  <p className="text-red-300/75 text-xs mt-1 leading-relaxed">{loginError.hint}</p>
-                </div>
-              </div>
+              <Alert
+                variant="error"
+                title={loginError.title}
+                description={loginError.hint}
+              />
             )}
 
-            <button type="submit" disabled={isLoading} className="btn-primary flex items-center justify-center gap-2">
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-dark-bg border-t-transparent rounded-full animate-spin" />
-              ) : (
+            <Button type="submit" fullWidth size="lg" loading={isLoading}>
+              {!isLoading && (
                 <>
                   Sign In
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
 
-        <p className="text-center text-gray-600 text-xs mt-6">
-          Your Future Matters
-        </p>
+        <YfmLogoTagline className="mt-6 sm:mt-7" />
       </div>
     </div>
   );

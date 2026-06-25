@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useToast } from '../hooks/useToast';
 import { Search, Download, MapPin, Building2, Wifi } from 'lucide-react';
 import type { FCCLocation } from '../types';
+import { ProgressiveFluxLoader } from '@/components/ui/progressive-flux-loader';
 
 const US_STATES = [
   { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
@@ -182,7 +183,7 @@ export function FCCLeadLookup() {
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className="w-full bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
+            className="w-full bg-accent-cyan text-white font-semibold py-3 rounded-xl
                      hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
                      flex items-center justify-center gap-2
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -196,6 +197,16 @@ export function FCCLeadLookup() {
               </>
             )}
           </button>
+
+          {isLoading && (
+            <ProgressiveFluxLoader
+              duration={2.5}
+              loop
+              showLabel={false}
+              className="max-w-none gap-0 pt-1"
+              barClassName="h-2 bg-dark-border"
+            />
+          )}
         </div>
       </div>
 

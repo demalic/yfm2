@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -10,6 +10,7 @@ import {
   RefreshCw,
   RotateCcw,
   ShieldCheck,
+  ShieldX,
   XCircle,
 } from 'lucide-react';
 import { US_STATES } from '../constants/usStates';
@@ -29,23 +30,79 @@ import type { EligibilityJob, EligibilityCountKey, PendingQualifierJob, PhaseSta
 import { ConfirmDialog } from './ConfirmDialog';
 import { JobTerminal } from './JobTerminal';
 import { TowerStatusBadge } from './TowerStatusBadge';
+import { ProgressiveFluxLoader } from '@/components/ui/progressive-flux-loader';
 
-function PhaseProgressBar({ progress, status }: { progress: number; status: PhaseStatus }) {
-  const pct = Math.min(100, Math.max(0, progress));
-  const barColor =
-    status === 'failed'
-      ? 'bg-red-500'
-      : status === 'completed'
-        ? 'bg-green-500'
-        : 'bg-accent-cyan';
+function getTowerBlockReason(towerConfigured: boolean, towerOnline: boolean): string | null {
+  if (!towerConfigured) return 'Configure tower';
+  if (!towerOnline) return 'Tower offline';
+  return null;
+}
+
+interface BlockedActionButtonProps {
+  children: ReactNode;
+  onClick: () => void;
+  loading?: boolean;
+  blockReason: string | null;
+  faded?: boolean;
+}
+
+function BlockedActionButton({
+  children,
+  onClick,
+  loading = false,
+  blockReason,
+  faded = false,
+}: BlockedActionButtonProps) {
+  const dimmed = loading || faded || Boolean(blockReason);
 
   return (
-    <div className="w-full h-2.5 bg-dark-border rounded-full overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`}
-        style={{ width: `${pct}%` }}
-      />
+    <div className="relative flex-1 group cursor-default">
+      {blockReason && (
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-1/2 -translate-x-1/2 z-50
+                     opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+        >
+          <div className="rounded-lg border border-red-500/30 bg-dark-card px-3 py-2 text-xs font-medium text-red-300 shadow-lg whitespace-nowrap">
+            {blockReason}
+          </div>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          if (loading || blockReason) return;
+          onClick();
+        }}
+        disabled={loading}
+        aria-disabled={dimmed && !loading}
+        className={`w-full bg-accent-cyan text-white font-semibold py-3 rounded-xl
+                   flex items-center justify-center gap-2 transition-all cursor-default
+                   ${dimmed ? 'opacity-50' : 'hover:bg-accent-cyan/90 active:scale-[0.98]'}
+                   disabled:opacity-50`}
+      >
+        {children}
+      </button>
     </div>
+  );
+}
+
+function PhaseProgressBar({ progress, status }: { progress: number; status: PhaseStatus }) {
+  const gradient =
+    status === 'failed'
+      ? 'linear-gradient(90deg, #dc2626 0%, #ef4444 50%, #dc2626 100%)'
+      : status === 'completed'
+        ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 50%, #16a34a 100%)'
+        : undefined;
+
+  return (
+    <ProgressiveFluxLoader
+      value={progress}
+      showLabel={false}
+      gradient={gradient}
+      className="max-w-none gap-0"
+      barClassName="h-2 bg-dark-border"
+    />
   );
 }
 
@@ -142,6 +199,8 @@ export function EligibilityCheck() {
   const { status: towerStatus, health: towerHealth, error: towerError, refresh: refreshTowerHealth } =
     useTowerHealth();
   const towerOnline = towerStatus === 'online';
+  const towerReady = towerConfigured && towerOnline;
+  const towerBlockReason = getTowerBlockReason(towerConfigured, towerOnline);
   const pendingJobs = towerHealth?.pendingJobs ?? [];
   const isPendingLoading = towerStatus === 'checking';
   const [isRefreshingTower, setIsRefreshingTower] = useState(false);
@@ -166,9 +225,22 @@ export function EligibilityCheck() {
   }, [towerOnline]);
 
   const handleLoggedOfflineInteract = () => {
-    if (towerOnline || isRunning) return;
+    if (isRunning) return;
+    if (!towerConfigured || towerOnline) return;
     setShowLoggedOfflineHint(true);
     void refreshTowerHealth();
+  };
+
+  const handleLoggedChange = (jobId: string) => {
+    if (isRunning) return;
+    if (!towerConfigured || !towerOnline) {
+      if (!towerOnline) {
+        setShowLoggedOfflineHint(true);
+        void refreshTowerHealth();
+      }
+      return;
+    }
+    void handleResumeSelection(jobId);
   };
 
   const handleRefreshTower = async () => {
@@ -213,7 +285,7 @@ export function EligibilityCheck() {
   };
 
   const handleRun = async () => {
-    if (!canRun) return;
+    if (!canRun || !towerReady) return;
 
     await runPipeline({
       isp: selectedIsp,
@@ -342,17 +414,6 @@ export function EligibilityCheck() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Tower connection warning */}
-        {!towerConfigured && (
-          <div className="mx-4 mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-            <p className="text-amber-300 font-medium text-sm">Tower URL not configured</p>
-            <p className="text-amber-200/70 text-xs mt-1">
-              Set <code className="text-amber-200">VITE_TOWER_API_URL</code> in your{' '}
-              <code className="text-amber-200">.env</code> file (or Vercel env vars) to point at the tower API.
-            </p>
-          </div>
-        )}
-
         {/* Setup form */}
         <div className="p-4 border-b border-dark-border space-y-4">
           {/* ISP */}
@@ -408,7 +469,7 @@ export function EligibilityCheck() {
                 ZIP code
               </label>
               <div
-                className="flex rounded-xl border border-dark-border bg-dark-card overflow-hidden
+                className="flex items-stretch rounded-xl border border-dark-border bg-dark-card overflow-hidden
                          focus-within:border-accent-cyan transition-colors"
               >
                 <input
@@ -425,31 +486,33 @@ export function EligibilityCheck() {
                   className="flex-1 min-w-0 bg-transparent px-4 py-3 text-white placeholder-gray-500
                            focus:outline-none disabled:opacity-50"
                 />
-                {towerConfigured && (
-                  <div className="relative shrink-0 border-l border-dark-border bg-dark-hover/80">
-                    <select
-                      value={resumeJobId}
-                      onChange={(e) => void handleResumeSelection(e.target.value)}
-                      onFocus={handleLoggedOfflineInteract}
-                      onMouseDown={handleLoggedOfflineInteract}
-                      disabled={isRunning}
-                      aria-label="Load logged zipcheck"
-                      className="h-full appearance-none pl-3 pr-9 py-3 bg-transparent text-sm text-gray-300
-                               focus:outline-none disabled:opacity-50 cursor-pointer min-w-[7.5rem]"
-                    >
-                      <option value="">Logged</option>
-                      {pendingJobs.map((entry) => (
-                        <option key={entry.jobId} value={entry.jobId}>
-                          {formatPendingShort(entry)}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
-                      aria-hidden
-                    />
-                  </div>
-                )}
+                <div className="relative flex shrink-0 items-center border-l border-dark-border bg-dark-hover/80 cursor-default">
+                  <select
+                    value={resumeJobId}
+                    onChange={(e) => handleLoggedChange(e.target.value)}
+                    onFocus={handleLoggedOfflineInteract}
+                    onMouseDown={handleLoggedOfflineInteract}
+                    disabled={isRunning}
+                    aria-disabled={!towerConfigured || !towerOnline}
+                    aria-label="Load logged zipcheck"
+                    title={!towerConfigured ? 'Configure VITE_TOWER_API_URL to load logged zipchecks' : undefined}
+                    className={`h-full min-h-[3rem] appearance-none pl-3 pr-9 py-3 bg-transparent text-sm text-gray-300
+                             focus:outline-none cursor-default min-w-[7.5rem]
+                             ${!towerConfigured || !towerOnline ? 'opacity-50' : ''}
+                             disabled:opacity-50`}
+                  >
+                    <option value="">Logged</option>
+                    {pendingJobs.map((entry) => (
+                      <option key={entry.jobId} value={entry.jobId}>
+                        {formatPendingShort(entry)}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+                    aria-hidden
+                  />
+                </div>
               </div>
 
               {isResumeMode && selectedPending && (
@@ -504,13 +567,10 @@ export function EligibilityCheck() {
           {/* Actions */}
           <div className="flex gap-2">
             {canRunQualifierFromDropdown ? (
-              <button
+              <BlockedActionButton
                 onClick={handleRunQualifier}
-                disabled={!towerOnline}
-                className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
-                         hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
-                         flex items-center justify-center gap-2
-                         disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={isStarting}
+                blockReason={towerBlockReason}
               >
                 {isStarting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -520,15 +580,13 @@ export function EligibilityCheck() {
                     <span>Run Qualifier</span>
                   </>
                 )}
-              </button>
+              </BlockedActionButton>
             ) : (
-              <button
+              <BlockedActionButton
                 onClick={handleRun}
-                disabled={!canRun || !towerOnline}
-                className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
-                         hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
-                         flex items-center justify-center gap-2
-                         disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={isStarting}
+                blockReason={towerBlockReason}
+                faded={!canRun && !towerBlockReason}
               >
                 {isStarting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -538,7 +596,7 @@ export function EligibilityCheck() {
                     <span>Run Pipeline</span>
                   </>
                 )}
-              </button>
+              </BlockedActionButton>
             )}
 
             {canRetryQualifier && (
@@ -775,24 +833,24 @@ export function EligibilityCheck() {
           </div>
         )}
 
-        {/* Idle help */}
+        {/* Idle state */}
         {!job && (
           <div className="px-4 py-8 text-center text-gray-500">
-            <ShieldCheck className="w-12 h-12 mx-auto mb-3 opacity-20" />
-            <p className="font-medium text-gray-400">Ready to run</p>
-            <p className="text-sm mt-2 max-w-sm mx-auto">
-              Select an ISP and ZIP or state. The tower will run zip checker first,
-              then feed that CSV into the qualifier automatically.
+            {towerReady ? (
+              <ShieldCheck className="w-12 h-12 mx-auto mb-3 text-green-500" />
+            ) : (
+              <ShieldX className="w-12 h-12 mx-auto mb-3 text-red-500" />
+            )}
+            <p className="font-medium text-gray-400">
+              {towerReady ? 'Ready to run' : 'Not ready to run.'}
             </p>
-            {ispConfig && (
-              <div className="mt-6 text-left max-w-sm mx-auto space-y-2">
-                <p className="text-xs text-gray-600 uppercase tracking-wide">Output buckets</p>
-                {ispConfig.statusBuckets.map((b) => (
-                  <div key={b.key} className="flex items-start gap-2 text-xs">
-                    <span className={`font-medium ${b.color}`}>{b.label}</span>
-                    <span className="text-gray-600">— {b.description}</span>
-                  </div>
-                ))}
+            {!towerConfigured && (
+              <div className="mt-4 mx-auto max-w-sm p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-left">
+                <p className="text-red-400 font-medium text-sm">Tower URL not configured</p>
+                <p className="text-red-300/70 text-xs mt-1">
+                  Set <code className="text-red-300">VITE_TOWER_API_URL</code> in your{' '}
+                  <code className="text-red-300">.env</code> file (or Vercel env vars) to point at the tower API.
+                </p>
               </div>
             )}
           </div>

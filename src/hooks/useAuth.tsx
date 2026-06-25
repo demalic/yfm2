@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
-import type { Member, Role, SessionData } from '../types';
+import type { Member, SessionData } from '../types';
 
 const SESSION_TTL = 30 * 60 * 1000; // 30 minutes
 

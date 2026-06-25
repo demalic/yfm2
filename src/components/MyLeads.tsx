@@ -8,6 +8,7 @@ import { Search, MapPin, Clock, ChevronRight, Filter, X, Users, ToggleLeft, Togg
 import type { Lead, Member } from '../types';
 import { StatusIconSvg } from './StatusIcon';
 import type { IconKey } from './StatusIcon';
+import { PageHeader, Card, Chip } from './ui';
 
 interface MyLeadsProps {
   onLeadClick?: (lead: Lead) => void;
@@ -116,32 +117,32 @@ export function MyLeads({ onLeadClick }: MyLeadsProps) {
 
   return (
     <div className="h-full flex flex-col bg-dark-bg">
-      {/* Header */}
-      <div className="px-4 py-4 border-b border-dark-border">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-white">My Leads</h1>
-          <span className="text-sm text-gray-400">{filteredLeads.length} leads</span>
-        </div>
+      <PageHeader
+        title="My Leads"
+        actions={
+          <span className="text-sm text-gray-400 font-medium">{filteredLeads.length} leads</span>
+        }
+      />
 
-        {/* Admin Auto-Assign Toggle */}
+      <div className="px-4 pb-3 space-y-3 border-b border-dark-border">
         {member?.role === 'admin' && (
-          <div className="mb-3 bg-dark-card rounded-xl p-3 border border-dark-border">
+          <Card padding="sm">
             <div className="flex items-center gap-2 mb-2">
               <Users className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-300">Auto-assign new leads</span>
+              <span className="text-sm text-gray-300 font-medium">Auto-assign new leads</span>
             </div>
             <select
               value={autoAssignRep}
               onChange={(e) => handleAutoAssignChange(e.target.value)}
               className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2
-                       text-white focus:outline-none focus:border-accent-cyan"
+                       text-white focus:outline-none focus:border-brand-orange/70"
             >
               <option value="">Leave unassigned</option>
               {teamMembers.map((tm) => (
                 <option key={tm.id} value={tm.name}>{tm.name}</option>
               ))}
             </select>
-          </div>
+          </Card>
         )}
 
         {/* Search */}
@@ -153,30 +154,26 @@ export function MyLeads({ onLeadClick }: MyLeadsProps) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search address..."
             className="w-full bg-dark-card border border-dark-border rounded-xl pl-10 pr-4 py-2.5
-                     text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan
+                     text-white placeholder-gray-500 focus:outline-none focus:border-brand-orange/70
                      text-base"
           />
         </div>
 
         {/* Status Filters */}
         {statuses.length > 0 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto scroll-hide pb-1">
+          <div className="flex gap-2 overflow-x-auto scroll-hide pb-1">
             {statuses.slice(0, 6).map((status) => (
-              <button
+              <Chip
                 key={status.id}
+                active={statusFilter.has(status.id)}
+                color={status.color}
                 onClick={() => toggleStatusFilter(status.id)}
-                className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm
-                          transition-colors whitespace-nowrap
-                          ${statusFilter.has(status.id)
-                            ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/50'
-                            : 'bg-dark-card text-gray-400 border border-dark-border hover:border-gray-600'
-                          }`}
               >
                 <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: status.color }}>
                   <StatusIconSvg iconKey={status.icon as IconKey} className="w-2.5 h-2.5 text-white" />
                 </div>
                 <span>{status.name}</span>
-              </button>
+              </Chip>
             ))}
           </div>
         )}

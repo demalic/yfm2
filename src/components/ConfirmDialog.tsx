@@ -51,14 +51,14 @@ export function ConfirmDialog({
 
       <div
         className="relative w-full max-w-md rounded-2xl overflow-hidden border border-white/10
-                   shadow-[0_0_60px_rgba(6,182,212,0.15),0_24px_48px_rgba(0,0,0,0.5)]
+                   shadow-[0_0_60px_rgba(249,115,22,0.15),0_24px_48px_rgba(0,0,0,0.5)]
                    animate-[dialogPop_0.25s_cubic-bezier(0.16,1,0.3,1)_forwards]"
       >
         <div
           className={`absolute inset-x-0 top-0 h-1 ${
             isDanger
               ? 'bg-gradient-to-r from-red-500 via-orange-500 to-red-500'
-              : 'bg-gradient-to-r from-accent-cyan via-accent-blue to-accent-purple'
+              : 'bg-gradient-to-r from-brand-orange via-brand-orange-bright to-brand-orange'
           }`}
         />
 
@@ -113,7 +113,7 @@ export function ConfirmDialog({
                 ${
                   isDanger
                     ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white hover:opacity-90 shadow-[0_0_20px_rgba(239,68,68,0.35)]'
-                    : 'bg-accent-cyan text-dark-bg hover:bg-cyan-300 shadow-glow-sm'
+                    : 'bg-brand-orange text-white hover:bg-brand-orange-bright shadow-glow-sm'
                 }`}
             >
               {confirmLabel}

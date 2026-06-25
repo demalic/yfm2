@@ -33,7 +33,7 @@ export function getLoginErrorInfo(
     case 'config':
       return {
         title: 'App not configured',
-        hint: 'Database settings are missing on this deployment. An admin needs to add Supabase env vars in Vercel.',
+        hint: 'Database settings are missing. For local dev, copy .env.example to .env.local and set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from Supabase → Settings → API, then restart the dev server.',
       };
     default:
       return {

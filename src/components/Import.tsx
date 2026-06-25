@@ -8,6 +8,7 @@ import { Upload, FileText, Trash2, Download, AlertCircle } from 'lucide-react';
 import type { ImportBatch, Lead } from '../types';
 import { StatusIconSvg } from './StatusIcon';
 import type { IconKey } from './StatusIcon';
+import { PageHeader } from './ui';
 
 interface ParsedCSV {
   addresses: Array<{
@@ -269,10 +270,7 @@ export function Import() {
 
   return (
     <div className="h-full flex flex-col bg-dark-bg">
-      {/* Header */}
-      <div className="px-4 py-4 border-b border-dark-border">
-        <h1 className="text-xl font-bold text-white">Imports</h1>
-      </div>
+      <PageHeader title="Imports" subtitle="Upload and manage lead batches" />
 
       {/* Upload Area */}
       <div className="p-4">
@@ -405,7 +403,7 @@ export function Import() {
                 </button>
                 <button
                   onClick={handleImport}
-                  className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-2.5 rounded-xl
+                  className="flex-1 bg-accent-cyan text-white font-semibold py-2.5 rounded-xl
                            hover:bg-accent-cyan/90 active:scale-[0.98] transition-all"
                 >
                   Import

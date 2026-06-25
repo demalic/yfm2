@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YFM2 — Getting the Tower Live</title>
+  <style>
+    @page { margin: 1in; }
+    body {
+      font-family: "Google Sans", "Segoe UI", Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.55;
+      color: #202124;
+      max-width: 7.5in;
+      margin: 0 auto;
+      padding: 48px 56px 72px;
+      background: #fff;
+    }
+    .cover {
+      text-align: center;
+      padding: 48px 0 40px;
+      border-bottom: 3px solid #06b6d4;
+      margin-bottom: 36px;
+    }
+    .cover .eyebrow {
+      font-size: 10pt;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #5f6368;
+      margin-bottom: 12px;
+    }
+    .cover h1 {
+      font-size: 28pt;
+      font-weight: 700;
+      color: #0d0f14;
+      margin: 0 0 10px;
+      line-height: 1.2;
+    }
+    .cover .subtitle {
+      font-size: 13pt;
+      color: #5f6368;
+      margin: 0 0 24px;
+    }
+    .cover .meta {
+      font-size: 10pt;
+      color: #80868b;
+    }
+    h2 {
+      font-size: 16pt;
+      color: #0d0f14;
+      margin: 32px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #dadce0;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 12pt;
+      color: #1a73e8;
+      margin: 22px 0 8px;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 10px; }
+    ul, ol { margin: 0 0 12px; padding-left: 22px; }
+    li { margin-bottom: 6px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+      font-size: 10.5pt;
+    }
+    th {
+      background: #e8f0fe;
+      color: #174ea6;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 12px;
+      border: 1px solid #c6dafc;
+    }
+    td {
+      padding: 9px 12px;
+      border: 1px solid #dadce0;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #f8f9fa; }
+    code, .code-block {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 9.5pt;
+    }
+    code {
+      background: #f1f3f4;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #b06000;
+    }
+    .code-block {
+      display: block;
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-left: 4px solid #06b6d4;
+      padding: 12px 14px;
+      margin: 10px 0 14px;
+      white-space: pre-wrap;
+      color: #202124;
+    }
+    .callout {
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 14px 0;
+      font-size: 10.5pt;
+    }
+    .callout-info {
+      background: #e8f0fe;
+      border: 1px solid #c6dafc;
+      color: #174ea6;
+    }
+    .callout-warn {
+      background: #fef7e0;
+      border: 1px solid #f9e076;
+      color: #7c4a00;
+    }
+    .callout-tip {
+      background: #e6f4ea;
+      border: 1px solid #a8dab5;
+      color: #137333;
+    }
+    .callout strong { display: block; margin-bottom: 4px; font-size: 11pt; }
+    .checklist { list-style: none; padding-left: 4px; }
+    .checklist li::before { content: "☐  "; font-size: 12pt; }
+    .folder-tree {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      padding: 14px 16px;
+      font-family: Consolas, monospace;
+      font-size: 9.5pt;
+      line-height: 1.6;
+      margin: 12px 0 18px;
+    }
+    .toc {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 0 0 28px;
+    }
+    .toc-title { font-weight: 700; margin-bottom: 10px; color: #0d0f14; }
+    .toc ol { margin: 0; }
+    .toc a { color: #1a73e8; text-decoration: none; }
+    .page-break { page-break-before: always; }
+    .footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #dadce0;
+      font-size: 9pt;
+      color: #80868b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cover">
+    <div class="eyebrow">YFM2 Admin · Operations Guide</div>
+    <h1>Getting the Tower Live</h1>
+    <p class="subtitle">Step-by-step setup for the Frontier eligibility pipeline</p>
+    <p class="meta">Live site: yfm2-theta.vercel.app · Stack: Vite + Tower API + Tailscale Funnel</p>
+  </div>
+
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li>Overview — what runs where</li>
+      <li>One-time setup on the tower PC</li>
+      <li>Starting the tower (every session)</li>
+      <li>Daily checklist</li>
+      <li>Running a test job from the website</li>
+      <li>Troubleshooting</li>
+      <li>Quick reference commands</li>
+    </ol>
+  </div>
+
+  <h2>1. Overview — what runs where</h2>
+
+  <table>
+    <tr>
+      <th>Machine</th>
+      <th>Role</th>
+    </tr>
+    <tr>
+      <td><strong>Dev PC</strong></td>
+      <td>Edit website code in Cursor. Optional local testing with <code>npm run dev</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Tower PC</strong></td>
+      <td>Runs the API server, Frontier bot scripts, and Chrome. <strong>Must stay on during jobs.</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Vercel</strong></td>
+      <td>Hosts the website only. Never runs zip checker or qualifier bots.</td>
+    </tr>
+    <tr>
+      <td><strong>Tailscale Funnel</strong></td>
+      <td>Provides a public HTTPS URL so the live website can reach your tower PC.</td>
+    </tr>
+  </table>
+
+  <div class="callout callout-info">
+    <strong>Key idea</strong>
+    The website sends job orders to the tower. The tower runs the bots and sends progress back. If either tower window is closed, the site shows <strong>Tower offline</strong>.
+  </div>
+
+  <h2>2. One-time setup on the tower PC</h2>
+  <p>Do this once, or again after you update tower-server or bot files on your dev PC.</p>
+
+  <h3>Step 2.1 — Confirm Google Drive folder layout</h3>
+  <p>Files sync via Google Drive to the tower at <code>G:\My Drive\</code>:</p>
+
+  <div class="folder-tree">G:\My Drive\
+├── bot\
+│   ├── frontier_zipcheck_v2.py      ← Zip checker (phase 1)
+│   └── frontier_checker60.py       ← Qualifier (phase 2)
+└── tower-server\
+    ├── main.py
+    ├── start.bat
+    ├── requirements.txt
+    ├── .env.example
+    └── .env                          ← you create this</div>
+
+  <p>After editing on your dev PC, wait for Google Drive to finish syncing before starting the tower.</p>
+
+  <h3>Step 2.2 — Install tower-server dependencies</h3>
+  <p>Open <strong>Command Prompt</strong> and run <strong>one command at a time</strong>:</p>
+
+  <div class="code-block">cd /d "G:\My Drive\tower-server"
+pip install -r requirements.txt</div>
+
+  <h3>Step 2.3 — Create the <code>.env</code> file</h3>
+
+  <div class="code-block">cd /d "G:\My Drive\tower-server"
+copy .env.example .env</div>
+
+  <p>Open <code>.env</code> in Notepad and confirm these values:</p>
+
+  <div class="code-block">TOWER_BOT_DIR=G:\My Drive\bot
+TOWER_PYTHON=python
+TOWER_JOBS_DIR=./jobs
+TOWER_PORT=8787</div>
+
+  <div class="callout callout-warn">
+    <strong>Important</strong>
+    <code>TOWER_PYTHON=python</code> must point to the Python that has bot packages (pandas, selenium, undetected-chromedriver). Use system Python — not a tiny venv that only has FastAPI.
+  </div>
+
+  <h3>Step 2.4 — Install Tailscale</h3>
+  <ol>
+    <li>Download Tailscale from <strong>https://tailscale.com</strong></li>
+    <li>Install and sign in (e.g. demalic@github)</li>
+    <li>Leave Tailscale running in the background</li>
+  </ol>
+
+  <h3>Step 2.5 — Set the website environment variable on Vercel</h3>
+  <p>You will get the exact URL in Part 3. The live site needs this variable:</p>
+
+  <table>
+    <tr>
+      <th>Variable name</th>
+      <th>Example value</th>
+    </tr>
+    <tr>
+      <td><code>VITE_TOWER_API_URL</code></td>
+      <td><code>https://desktop-xxxxx.tail5a5189.ts.net</code></td>
+    </tr>
+  </table>
+
+  <p><strong>Rules:</strong> No trailing slash. Do not add <code>/health</code> at the end.</p>
+
+  <ol>
+    <li>Go to vercel.com → your <strong>yfm2</strong> project</li>
+    <li>Settings → Environment Variables</li>
+    <li>Add or edit <code>VITE_TOWER_API_URL</code></li>
+    <li>Redeploy after changing the value</li>
+  </ol>
+
+  <div class="page-break"></div>
+
+  <h2>3. Starting the tower (every session)</h2>
+
+  <div class="callout callout-tip">
+    <strong>You need TWO windows open</strong>
+    Closing either window takes the tower offline. Keep both open for the entire time you want jobs to run.
+  </div>
+
+  <h3>Window 1 — Start the API server</h3>
+  <ol>
+    <li>Open <strong>Command Prompt</strong></li>
+    <li>Run these commands (one at a time):</li>
+  </ol>
+
+  <div class="code-block">cd /d "G:\My Drive\tower-server"
+python main.py</div>
+
+  <p>Expected output:</p>
+  <div class="code-block">Uvicorn running on http://0.0.0.0:8787</div>
+
+  <p><strong>Leave this window open.</strong></p>
+
+  <p>Quick test on the tower PC — open a browser and visit:</p>
+  <div class="code-block">http://localhost:8787/health</div>
+  <p>You should see JSON with <code>"ok": true</code> and both scripts listed as found.</p>
+
+  <h3>Window 2 — Expose the tower to the internet</h3>
+  <ol>
+    <li>Open a <strong>second</strong> Command Prompt or PowerShell window</li>
+    <li>Run:</li>
+  </ol>
+
+  <div class="code-block">tailscale funnel 8787</div>
+
+  <p>Tailscale prints an HTTPS URL, for example:</p>
+  <div class="code-block">https://desktop-9r5uufo.tail5a5189.ts.net</div>
+
+  <ol start="3">
+    <li><strong>Copy that URL</strong> — you need it for Vercel</li>
+    <li><strong>Leave this window open</strong></li>
+  </ol>
+
+  <div class="callout callout-info">
+    <strong>Normal behavior</strong>
+    Visiting the bare funnel URL may show <code>{"detail":"Not Found"}</code>. That is expected. Use <code>/health</code> or <code>/api/...</code> paths instead.
+  </div>
+
+  <h3>Step 3.3 — Update Vercel with your funnel URL</h3>
+  <ol>
+    <li>In Vercel, set <code>VITE_TOWER_API_URL</code> to your funnel URL from Window 2</li>
+    <li>Redeploy if you changed the variable</li>
+  </ol>
+
+  <h3>Step 3.4 — Confirm on the live website</h3>
+  <ol>
+    <li>Open <strong>https://yfm2-theta.vercel.app</strong></li>
+    <li>Log in as admin</li>
+    <li>Go to the <strong>Eligibility</strong> tab</li>
+    <li>Top right should show <strong>Tower online</strong> (green badge)</li>
+  </ol>
+
+  <p>If it shows <strong>Tower offline</strong> (red): click the badge → dropdown shows help → click <strong>Check now</strong> after fixing Windows 1 and 2.</p>
+
+  <h2>4. Daily checklist</h2>
+  <p>Before running eligibility jobs:</p>
+
+  <ul class="checklist">
+    <li>Tower PC is on and logged in</li>
+    <li>Google Drive finished syncing (bot + tower-server folders)</li>
+    <li>Window 1 running: <code>python main.py</code></li>
+    <li>Window 2 running: <code>tailscale funnel 8787</code></li>
+    <li>Live site shows <strong>Tower online</strong></li>
+    <li>Optional: <code>http://localhost:8787/health</code> returns ok</li>
+  </ul>
+
+  <h2>5. Running a test job from the website</h2>
+  <ol>
+    <li>Eligibility tab → select <strong>Frontier</strong></li>
+    <li>Enter a <strong>5-digit ZIP code</strong></li>
+    <li>Click <strong>Run Pipeline</strong></li>
+    <li>Watch <strong>Zip Checker</strong> (phase 1) then <strong>Qualifier</strong> (phase 2)</li>
+    <li>Use <strong>Tower output</strong> at the bottom for live logs</li>
+  </ol>
+
+  <div class="callout callout-warn">
+    <strong>If qualifier fails right after “Starting browser…”</strong>
+    Chrome or ChromeDriver is the issue. Confirm Chrome is installed and <code>frontier_checker60.py</code> uses the correct <code>version_main</code> for your Chrome version.
+  </div>
+
+  <p>If zip checker succeeded but qualifier failed, use <strong>Retry qualifier</strong> — it reuses the zip check CSV and does not download addresses again.</p>
+
+  <div class="page-break"></div>
+
+  <h2>6. Troubleshooting</h2>
+
+  <table>
+    <tr>
+      <th>Problem</th>
+      <th>Solution</th>
+    </tr>
+    <tr>
+      <td><strong>Tower offline</strong> on website</td>
+      <td>Restart Window 1 and Window 2. Confirm Vercel <code>VITE_TOWER_API_URL</code> matches current funnel URL.</td>
+    </tr>
+    <tr>
+      <td><strong>cd</strong> fails to change drive</td>
+      <td>Use <code>cd /d "G:\My Drive\tower-server"</code> — include <code>/d</code> and quotes.</td>
+    </tr>
+    <tr>
+      <td>PowerShell shows <code>&gt;&gt;</code></td>
+      <td>Unclosed quote — press Ctrl+C, open a new window, paste one command at a time.</td>
+    </tr>
+    <tr>
+      <td>Zip check OK, qualifier fails instantly</td>
+      <td>Run qualifier manually on tower; fix Chrome / driver version.</td>
+    </tr>
+    <tr>
+      <td>“Tower URL not configured”</td>
+      <td>Set <code>VITE_TOWER_API_URL</code> on Vercel and redeploy.</td>
+    </tr>
+    <tr>
+      <td>Funnel URL changed after reboot</td>
+      <td>Run <code>tailscale funnel 8787</code> again and update Vercel.</td>
+    </tr>
+  </table>
+
+  <h3>Manual health check (from any browser)</h3>
+  <div class="code-block">https://YOUR-FUNNEL-URL.ts.net/health</div>
+
+  <h3>Manual qualifier test (on tower PC)</h3>
+  <div class="code-block">cd /d "G:\My Drive\bot"
+python frontier_checker60.py --csv "G:\My Drive\tower-server\jobs\JOB-ID\zipcheck_24153.csv" --no-vpn</div>
+  <p>Replace <code>JOB-ID</code> and ZIP with your real job folder from a previous run.</p>
+
+  <h2>7. Quick reference commands</h2>
+
+  <h3>Window 1 — API server</h3>
+  <div class="code-block">cd /d "G:\My Drive\tower-server"
+python main.py</div>
+
+  <h3>Window 2 — Public HTTPS URL</h3>
+  <div class="code-block">tailscale funnel 8787</div>
+
+  <h3>Local health check (tower PC only)</h3>
+  <div class="code-block">http://localhost:8787/health</div>
+
+  <div class="footer">
+    YFM2 Tower Setup Guide · frontier_checker60 · Updated for live /health status on Eligibility tab
+  </div>
+
+</body>
+</html>

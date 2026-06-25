@@ -9,6 +9,8 @@ import { supabase } from '../lib/supabase';
 import { Users, Check, X } from 'lucide-react';
 import type { Member, Lead } from '../types';
 import { getIconSvgHtml } from './StatusIcon';
+import { PageHeader, Button } from './ui';
+import { applyMapTheme, createMapTileSets, type MapTileSet } from '../lib/mapTiles';
 
 export function Territory() {
   const { member } = useAuth();
@@ -47,10 +49,9 @@ export function Territory() {
           zoomControl: true,
         }).setView([37.5, -77.6], 11);
 
-        L.tileLayer(
-          'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-          { maxZoom: 19 }
-        ).addTo(map);
+        const tileSets = createMapTileSets();
+        applyMapTheme(map, tileSets, 'dark');
+        (map as L.Map & { tileSets: MapTileSet }).tileSets = tileSets;
 
         // Add markers for all leads
         const markers = L.markerClusterGroup();
@@ -105,7 +106,7 @@ export function Territory() {
 
       const isSelected = selectedLeads.some((l) => l.id === lead.id);
 
-      const pinColor = isSelected ? '#06b6d4' : status.color;
+      const pinColor = isSelected ? '#f89406' : status.color;
       const pinIcon = isSelected ? getIconSvgHtml('check', 'white', 14) : getIconSvgHtml(status.icon, 'white', 14);
       const marker = L.marker([lead.lat, lead.lng], {
         icon: L.divIcon({
@@ -141,8 +142,8 @@ export function Territory() {
         drawnPolygonRef.current.setLatLngs(drawPointsRef.current);
       } else {
         drawnPolygonRef.current = L.polygon(drawPointsRef.current, {
-          color: '#06b6d4',
-          fillColor: '#06b6d4',
+          color: '#f89406',
+          fillColor: '#f89406',
           fillOpacity: 0.1,
           weight: 2,
         }).addTo(map);
@@ -232,46 +233,34 @@ export function Territory() {
 
   return (
     <div className="h-full flex flex-col bg-dark-bg">
-      {/* Header */}
-      <div className="px-4 py-4 border-b border-dark-border">
-        <h1 className="text-xl font-bold text-white mb-3">Territory</h1>
-
-        {/* Controls */}
+      <PageHeader title="Territory" subtitle="Draw zones and assign leads">
         <div className="flex gap-2">
           {!isDrawing ? (
-            <button
-              onClick={handleStartDrawing}
-              className="flex-1 bg-accent-cyan/20 text-accent-cyan font-medium py-2 rounded-xl
-                       hover:bg-accent-cyan/30 active:scale-[0.98] transition-all"
-            >
+            <Button variant="outline" fullWidth onClick={handleStartDrawing}>
               Draw Territory
-            </button>
+            </Button>
           ) : (
             <>
-              <button
+              <Button
+                variant="secondary"
+                fullWidth
                 onClick={handleFinishDrawing}
                 disabled={polygonPoints.length < 3}
-                className="flex-1 bg-green-500/20 text-green-400 font-medium py-2 rounded-xl
-                         hover:bg-green-500/30 active:scale-[0.98] transition-all
-                         disabled:opacity-50 disabled:cursor-not-allowed"
+                className="!bg-green-500/15 !text-green-400 !border-green-500/30 hover:!bg-green-500/25"
               >
                 Finish ({polygonPoints.length} points)
-              </button>
-              <button
-                onClick={handleCancelDrawing}
-                className="bg-red-500/20 text-red-400 px-4 py-2 rounded-xl
-                         hover:bg-red-500/30 active:scale-[0.98] transition-all"
-              >
+              </Button>
+              <Button variant="danger" size="icon" onClick={handleCancelDrawing}>
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </>
           )}
         </div>
-      </div>
+      </PageHeader>
 
       {/* Map */}
       <div className="flex-1 relative">
-        <div ref={mapRef} className="w-full h-full" style={{ touchAction: 'auto' }} />
+        <div ref={mapRef} className="w-full h-full map-theme-dark" style={{ touchAction: 'auto' }} />
 
         {/* Drawing Instructions */}
         {isDrawing && (
@@ -323,7 +312,7 @@ export function Territory() {
               <button
                 onClick={handleAssign}
                 disabled={!selectedRep}
-                className="w-full bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
+                className="w-full bg-accent-cyan text-white font-semibold py-3 rounded-xl
                          hover:bg-accent-cyan/90 active:scale-[0.98] transition-all
                          disabled:opacity-50 disabled:cursor-not-allowed"
               >

@@ -6,8 +6,15 @@ import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../hooks/useToast';
 import { Users, Plus, Trash2, TrendingUp, DollarSign, UserPlus } from 'lucide-react';
 import type { Member } from '../types';
+import { PageHeader } from './ui';
 
-export function Team() {
+export type TeamSection = 'members' | 'commission';
+
+interface TeamProps {
+  section: TeamSection;
+}
+
+export function Team({ section }: TeamProps) {
   const { member } = useAuth();
   const { leads } = useLeads();
   const { commissionRate } = useSettings();
@@ -18,7 +25,6 @@ export function Team() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<'rep' | 'manager'>('rep');
   const [newMemberPassword, setNewMemberPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'team' | 'commission'>('team');
 
   useEffect(() => {
     async function loadMembers() {
@@ -131,38 +137,13 @@ export function Team() {
 
   return (
     <div className="h-full flex flex-col bg-dark-bg">
-      {/* Header */}
-      <div className="px-4 py-4 border-b border-dark-border">
-        <h1 className="text-xl font-bold text-white mb-3">Team</h1>
-
-        {/* Tabs */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('team')}
-            className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors
-                      ${activeTab === 'team'
-                        ? 'bg-accent-cyan/20 text-accent-cyan'
-                        : 'bg-dark-card text-gray-400 hover:text-white'
-                      }`}
-          >
-            Members
-          </button>
-          <button
-            onClick={() => setActiveTab('commission')}
-            className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors
-                      ${activeTab === 'commission'
-                        ? 'bg-accent-cyan/20 text-accent-cyan'
-                        : 'bg-dark-card text-gray-400 hover:text-white'
-                      }`}
-          >
-            Commission
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={section === 'members' ? 'Members' : 'Commission'}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'team' ? (
+        {section === 'members' ? (
           <div>
             {/* Add Member Button */}
             <div className="px-4 py-3 border-b border-dark-border">
@@ -344,7 +325,7 @@ export function Team() {
 
               <button
                 onClick={handleAddMember}
-                className="w-full bg-accent-cyan text-dark-bg font-semibold py-3 rounded-xl
+                className="w-full bg-accent-cyan text-white font-semibold py-3 rounded-xl
                          hover:bg-accent-cyan/90 active:scale-[0.98] transition-all"
               >
                 Add Member

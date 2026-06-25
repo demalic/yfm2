@@ -10,6 +10,13 @@ import type { Lead } from '../types';
 import { Locate, Compass, MapPin, Filter, X, Trash2 } from 'lucide-react';
 import { StatusIconSvg, getIconSvgHtml } from './StatusIcon';
 import type { IconKey } from './StatusIcon';
+import {
+  applyMapTheme,
+  createMapTileSets,
+  mapThemeBackground,
+  type MapTheme,
+  type MapTileSet,
+} from '../lib/mapTiles';
 
 interface LeadMapProps {
   onPinClick?: (lead: Lead) => void;
@@ -19,7 +26,7 @@ interface LeadMapProps {
 
 type LocationMode = 'off' | 'following' | 'heading';
 
-type MapTheme = 'dark' | 'light' | 'satellite';
+type MapWithTiles = L.Map & { tileSets: MapTileSet };
 
 export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: LeadMapProps) {
   const { member } = useAuth();
@@ -75,26 +82,9 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Add tile layers
-        const darkLayer = L.tileLayer(
-          'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-          { maxZoom: 19 }
-        );
-        const lightLayer = L.tileLayer(
-          'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-          { maxZoom: 19 }
-        );
-        const satelliteLayer = L.tileLayer(
-          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          { maxZoom: 19 }
-        );
-
-        darkLayer.addTo(map);
-
-        // Store layers
-        (map as L.Map & { dark: L.TileLayer; light: L.TileLayer; satellite: L.TileLayer }).dark = darkLayer;
-        (map as L.Map & { dark: L.TileLayer; light: L.TileLayer; satellite: L.TileLayer }).light = lightLayer;
-        (map as L.Map & { dark: L.TileLayer; light: L.TileLayer; satellite: L.TileLayer }).satellite = satelliteLayer;
+        const tileSets = createMapTileSets();
+        applyMapTheme(map, tileSets, mapThemeRef.current);
+        (map as MapWithTiles).tileSets = tileSets;
 
         // Marker cluster
         const markers = L.markerClusterGroup({
@@ -136,33 +126,15 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
   // Update tile layer when theme changes
   useEffect(() => {
     if (!mapInstanceRef.current) return;
-    const map = mapInstanceRef.current as L.Map & { dark: L.TileLayer; light: L.TileLayer; satellite: L.TileLayer };
+    const map = mapInstanceRef.current as MapWithTiles;
+    if (!map.tileSets) return;
 
-    // Remove all tile layers
-    map.eachLayer((layer) => {
-      if (layer instanceof L.TileLayer) {
-        map.removeLayer(layer);
-      }
-    });
+    applyMapTheme(map, map.tileSets, mapTheme);
 
-    // Add correct layer
-    switch (mapTheme) {
-      case 'dark':
-        map.dark.addTo(map);
-        break;
-      case 'light':
-        map.light.addTo(map);
-        break;
-      case 'satellite':
-        map.satellite.addTo(map);
-        break;
-    }
-
-    // Update leaflet container background
     if (mapRef.current) {
       const container = mapRef.current.querySelector('.leaflet-container') as HTMLElement;
       if (container) {
-        container.style.background = mapTheme === 'light' ? '#f5f5f5' : '#0d0f14';
+        container.style.background = mapThemeBackground(mapTheme);
       }
     }
   }, [mapTheme]);
@@ -400,7 +372,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
     const pinIconHtml = getIconSvgHtml('dots', 'white', 14);
     tempMarkerRef.current = L.marker([lat, lng], {
       icon: L.divIcon({
-        html: `<div class="lead-pin loading" style="background-color: #06b6d4">${pinIconHtml}</div>`,
+        html: `<div class="lead-pin loading" style="background-color: #f89406">${pinIconHtml}</div>`,
         className: 'custom-led-marker',
         iconSize: [30, 30],
         iconAnchor: [15, 30],
@@ -535,7 +507,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
   };
 
   return (
-    <div className="relative w-full h-full">
+    <div className={`relative w-full h-full map-theme-${mapTheme}`}>
       {/* Map Container */}
       <div
         ref={mapRef}
@@ -550,7 +522,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
           onClick={handleLocationClick}
           className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors
                     ${locationMode !== 'off'
-                      ? 'bg-accent-cyan text-dark-bg'
+                      ? 'bg-accent-cyan text-white'
                       : 'bg-dark-card/95 text-white hover:bg-dark-hover'
                     }`}
           title={locationMode === 'off' ? 'Show location' : locationMode === 'following' ? 'Follow heading' : 'Turn off'}
@@ -573,7 +545,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
           onClick={() => setIsDroppingPin(!isDroppingPin)}
           className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors
                     ${isDroppingPin
-                      ? 'bg-accent-cyan text-dark-bg'
+                      ? 'bg-accent-cyan text-white'
                       : 'bg-dark-card/95 text-white hover:bg-dark-hover'
                     }`}
           title="Drop a pin"
@@ -586,7 +558,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
           onClick={() => setShowStatusFilter(!showStatusFilter)}
           className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors
                     ${localStatusFilter.size > 0
-                      ? 'bg-accent-cyan text-dark-bg'
+                      ? 'bg-accent-cyan text-white'
                       : 'bg-dark-card/95 text-white hover:bg-dark-hover'
                     }`}
           title="Filter by status"
@@ -601,7 +573,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
           <button
             onClick={() => handleThemeChange('dark')}
             className={`w-8 h-8 flex items-center justify-center transition-colors
-                      ${mapTheme === 'dark' ? 'bg-accent-cyan text-dark-bg' : 'text-white hover:bg-dark-hover'}`}
+                      ${mapTheme === 'dark' ? 'bg-accent-cyan text-white' : 'text-white hover:bg-dark-hover'}`}
             title="Dark theme"
           >
             🌙
@@ -609,7 +581,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
           <button
             onClick={() => handleThemeChange('light')}
             className={`w-8 h-8 flex items-center justify-center transition-colors
-                      ${mapTheme === 'light' ? 'bg-accent-cyan text-dark-bg' : 'text-white hover:bg-dark-hover'}`}
+                      ${mapTheme === 'light' ? 'bg-accent-cyan text-white' : 'text-white hover:bg-dark-hover'}`}
             title="Light theme"
           >
             ☀️
@@ -617,7 +589,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
           <button
             onClick={() => handleThemeChange('satellite')}
             className={`w-8 h-8 flex items-center justify-center transition-colors
-                      ${mapTheme === 'satellite' ? 'bg-accent-cyan text-dark-bg' : 'text-white hover:bg-dark-hover'}`}
+                      ${mapTheme === 'satellite' ? 'bg-accent-cyan text-white' : 'text-white hover:bg-dark-hover'}`}
             title="Satellite"
           >
             🛰️
@@ -628,7 +600,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
       {/* Drop Pin Mode Indicator */}
       {isDroppingPin && (
         <div className="absolute top-2 left-14 right-14 z-[1000]">
-          <div className="bg-accent-cyan/90 text-dark-bg rounded-xl px-3 py-2 text-sm font-medium text-center backdrop-blur-sm">
+          <div className="bg-accent-cyan/90 text-white rounded-xl px-3 py-2 text-sm font-medium text-center backdrop-blur-sm">
             Tap on the map to drop a pin
           </div>
         </div>
@@ -738,7 +710,7 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
             <div className="flex gap-2 pt-2">
               <button
                 onClick={handleSaveLead}
-                className="flex-1 bg-accent-cyan text-dark-bg font-semibold py-2.5 rounded-xl
+                className="flex-1 bg-accent-cyan text-white font-semibold py-2.5 rounded-xl
                          hover:bg-accent-cyan/90 active:scale-[0.98] transition-all"
               >
                 Save

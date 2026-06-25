@@ -6,35 +6,59 @@ export default {
     extend: {
       colors: {
         dark: {
-          bg: '#0d0f14',
-          card: '#161922',
-          border: '#2a2f3a',
-          hover: '#1e222d',
-          elevated: '#1a1f2e',
+          bg: '#000000',
+          card: '#0f0f0f',
+          border: '#1f1f1f',
+          hover: '#171717',
+          elevated: '#141414',
+        },
+        brand: {
+          orange: '#f89406',
+          'orange-bright': '#fa9f1a',
+          'orange-dim': '#e07d00',
+          white: '#ffffff',
+        },
+        muted: {
+          DEFAULT: '#1a1a1a',
+          foreground: '#a3a3a3',
+        },
+        primary: {
+          DEFAULT: '#f89406',
+          foreground: '#ffffff',
         },
         accent: {
-          cyan: '#06b6d4',
-          'cyan-dim': '#0891b2',
-          blue: '#3b82f6',
-          purple: '#8b5cf6',
+          cyan: '#f89406',
+          'cyan-dim': '#e07d00',
+          blue: '#fa9f1a',
+          purple: '#f89406',
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        glow: '0 0 24px rgba(6, 182, 212, 0.25)',
-        'glow-sm': '0 0 12px rgba(6, 182, 212, 0.2)',
-        card: '0 8px 32px rgba(0, 0, 0, 0.45)',
+        glow: '0 0 28px rgba(248, 148, 6, 0.35)',
+        'glow-sm': '0 0 14px rgba(248, 148, 6, 0.25)',
+        card: '0 8px 32px rgba(0, 0, 0, 0.65)',
+        'card-lg': '0 16px 48px rgba(0, 0, 0, 0.75)',
       },
       keyframes: {
         dialogPop: {
           '0%': { opacity: '0', transform: 'scale(0.92) translateY(8px)' },
           '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
         },
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
       },
       backgroundImage: {
-        'app-gradient': 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(6, 182, 212, 0.12), transparent), radial-gradient(ellipse 50% 40% at 100% 100%, rgba(59, 130, 246, 0.08), transparent)',
+        'app-gradient':
+          'radial-gradient(ellipse 90% 60% at 50% -15%, rgba(248, 148, 6, 0.12), transparent)',
+        'brand-gradient': 'linear-gradient(135deg, #fa9f1a 0%, #f89406 100%)',
+        'brand-gradient-subtle':
+          'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.05) 100%)',
       },
     },
   },
