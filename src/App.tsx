@@ -4,6 +4,7 @@ import { ToastProvider } from './hooks/useToast';
 import { Login } from './components/Login';
 import { SplashScreen } from './components/SplashScreen';
 import { LeadMap } from './components/LeadMap';
+import { MapSelectionScreen, type MapSubView } from './components/MapSelectionScreen';
 import { LeadsSubViewBar, type LeadsSubView } from './components/LeadsHub';
 import { TeamSubViewBar, type TeamSubView } from './components/TeamHub';
 import { Settings } from './components/Settings';
@@ -61,8 +62,10 @@ const Territory = lazy(() =>
 function getContentKey(
   activeTab: string,
   leadsSubView: LeadsSubView,
-  teamSubView: TeamSubView
+  teamSubView: TeamSubView,
+  mapSubView: MapSubView
 ) {
+  if (activeTab === 'map') return `map-${mapSubView}`;
   if (activeTab === 'leads') return `leads-${leadsSubView}`;
   if (activeTab === 'team') return `team-${teamSubView}`;
   return activeTab;
@@ -86,6 +89,7 @@ interface NavItem {
 function AppContent() {
   const { member, isAuthenticated, isLoading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('map');
+  const [mapSubView, setMapSubView] = useState<MapSubView>('select');
   const [leadsSubView, setLeadsSubView] = useState<LeadsSubView>('hub');
   const [teamSubView, setTeamSubView] = useState<TeamSubView>('hub');
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
@@ -127,6 +131,13 @@ function AppContent() {
     }
     if (id === 'team') {
       goToTeamHub();
+      return;
+    }
+    if (id === 'map') {
+      if (activeTab !== 'map') {
+        setMapSubView('select');
+      }
+      setActiveTab('map');
       return;
     }
     runTransition(id, () => setActiveTab(id), 480);
@@ -172,6 +183,11 @@ function AppContent() {
   const renderContent = () => {
     switch (activeTab) {
       case 'map':
+        if (mapSubView === 'select') {
+          return (
+            <MapSelectionScreen onContinue={() => setMapSubView('map')} />
+          );
+        }
         return (
           <LeadMap
             statusFilter={statusFilter.size > 0 ? statusFilter : undefined}
@@ -237,7 +253,7 @@ function AppContent() {
 
   const isNavActive = (id: string) => activeTab === id;
 
-  const contentKey = getContentKey(activeTab, leadsSubView, teamSubView);
+  const contentKey = getContentKey(activeTab, leadsSubView, teamSubView, mapSubView);
 
   return (
     <LeadsProvider>

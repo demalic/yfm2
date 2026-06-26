@@ -996,25 +996,30 @@ input, textarea, select {
   width: 100%;
 }
 
-/* Map tiles — dark: true dark base + color transfer + white labels */
+/* Map tiles — dark: lifted dark gray base + color transfer + Carto labels */
 .map-theme-dark .leaflet-layer.map-tile-dark-base {
-  filter: brightness(1.06) contrast(1.1);
+  filter: brightness(1.38) contrast(0.96) saturate(1.04);
 }
 
 .map-theme-dark .leaflet-layer.map-tile-color-overlay {
   mix-blend-mode: color;
-  opacity: 0.88;
+  opacity: 0.82;
   pointer-events: none;
 }
 
-.map-theme-dark .leaflet-layer.map-tile-labels {
+.map-theme-dark .leaflet-layer.map-tile-color-overlay .leaflet-tile {
+  /* Olive land; lower sat + sepia keeps water closer to gray base */
+  filter: brightness(1.02) sepia(0.14) saturate(0.56) hue-rotate(22deg);
+}
+
+.map-theme-dark .map-container,
+.map-theme-dark .leaflet-container {
+  background: #323640 !important;
+}
+
+.map-theme-dark .leaflet-layer.map-tile-dark-labels {
   pointer-events: none;
   z-index: 451 !important;
-}
-
-/* Plain white Carto labels — no outline, no drop-shadow, no filter */
-.map-theme-dark .leaflet-layer.map-tile-labels .leaflet-tile {
-  filter: none;
 }
 
 .map-theme-light .leaflet-layer.map-tile-light .leaflet-tile {
@@ -1023,6 +1028,11 @@ input, textarea, select {
 
 .map-theme-satellite .leaflet-layer.map-tile-satellite .leaflet-tile {
   filter: contrast(1.1) saturate(1.18);
+}
+
+.map-theme-satellite .leaflet-layer.map-tile-labels {
+  pointer-events: none;
+  z-index: 451 !important;
 }
 
 .map-theme-satellite .leaflet-layer.map-tile-labels .leaflet-tile {

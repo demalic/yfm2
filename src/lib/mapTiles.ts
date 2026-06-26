@@ -2,6 +2,10 @@ import L from 'leaflet';
 
 const CARTO = 'https://{s}.basemaps.cartocdn.com';
 
+/** Allow wide zoom-out (continental / multi-state); default view stays z11 regional. */
+export const MAP_MIN_ZOOM = 3;
+export const MAP_MAX_ZOOM = 20;
+
 export type MapTheme = 'dark' | 'light' | 'satellite';
 
 export interface MapTileSet {
@@ -11,7 +15,8 @@ export interface MapTileSet {
 }
 
 const tileDefaults: L.TileLayerOptions = {
-  maxZoom: 20,
+  minZoom: MAP_MIN_ZOOM,
+  maxZoom: MAP_MAX_ZOOM,
   subdomains: 'abcd',
   crossOrigin: 'anonymous',
 };
@@ -35,8 +40,8 @@ function createTileLayer(
 }
 
 /**
- * Dark: Carto dark_all — white labels on dark background (no outline), plus color underlay.
- * Light: Voyager. Satellite: imagery + white labels.
+ * Dark: dark_nolabels + Voyager color + Carto dark Matter labels (original dark_all lettering).
+ * Light: Voyager. Satellite: imagery + dark Matter labels (same lettering as dark theme).
  */
 export function createMapTileSets(): MapTileSet {
   const darkBase = createTileLayer(
@@ -50,8 +55,8 @@ export function createMapTileSets(): MapTileSet {
   );
 
   const darkLabels = createTileLayer(
-    `${CARTO}/light_only_labels/{z}/{x}/{y}{r}.png`,
-    'map-tile-labels',
+    `${CARTO}/dark_only_labels/{z}/{x}/{y}{r}.png`,
+    'map-tile-dark-labels',
   );
 
   const light = createTileLayer(
@@ -66,9 +71,8 @@ export function createMapTileSets(): MapTileSet {
   );
 
   const satelliteLabels = createTileLayer(
-    `${CARTO}/light_only_labels/{z}/{x}/{y}{r}.png`,
+    `${CARTO}/dark_only_labels/{z}/{x}/{y}{r}.png`,
     'map-tile-labels',
-    { opacity: 0.9 },
   );
 
   return {
@@ -98,6 +102,6 @@ export function mapThemeBackground(theme: MapTheme): string {
     case 'satellite':
       return '#141414';
     default:
-      return '#000000';
+      return '#323640';
   }
 }

@@ -10,7 +10,7 @@ import { Users, Check, X } from 'lucide-react';
 import type { Member, Lead } from '../types';
 import { getIconSvgHtml } from './StatusIcon';
 import { PageHeader, Button } from './ui';
-import { applyMapTheme, createMapTileSets, type MapTileSet } from '../lib/mapTiles';
+import { applyMapTheme, createMapTileSets, MAP_MIN_ZOOM, MAP_MAX_ZOOM, type MapTileSet } from '../lib/mapTiles';
 
 export function Territory() {
   const { member } = useAuth();
@@ -47,6 +47,8 @@ export function Territory() {
       requestAnimationFrame(() => {
         const map = L.map(mapRef.current!, {
           zoomControl: true,
+          minZoom: MAP_MIN_ZOOM,
+          maxZoom: MAP_MAX_ZOOM,
         }).setView([37.5, -77.6], 11);
 
         const tileSets = createMapTileSets();

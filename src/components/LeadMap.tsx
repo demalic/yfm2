@@ -7,13 +7,17 @@ import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../hooks/useToast';
 import { supabase } from '../lib/supabase';
 import type { Lead } from '../types';
-import { Locate, Compass, MapPin, Filter, X, Trash2 } from 'lucide-react';
+import { Locate, Compass, MapPin, Filter, X, Trash2, Moon, Sun, Satellite } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { StatusIconSvg, getIconSvgHtml } from './StatusIcon';
 import type { IconKey } from './StatusIcon';
+import { StaggeredDropdown } from './ui/animated-staggered-dropdown';
 import {
   applyMapTheme,
   createMapTileSets,
   mapThemeBackground,
+  MAP_MIN_ZOOM,
+  MAP_MAX_ZOOM,
   type MapTheme,
   type MapTileSet,
 } from '../lib/mapTiles';
@@ -27,6 +31,12 @@ interface LeadMapProps {
 type LocationMode = 'off' | 'following' | 'heading';
 
 type MapWithTiles = L.Map & { tileSets: MapTileSet };
+
+const THEME_ITEMS: { id: MapTheme; label: string; icon: LucideIcon }[] = [
+  { id: 'dark', label: 'Dark', icon: Moon },
+  { id: 'light', label: 'Light', icon: Sun },
+  { id: 'satellite', label: 'Satellite', icon: Satellite },
+];
 
 export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: LeadMapProps) {
   const { member } = useAuth();
@@ -78,6 +88,8 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
         const map = L.map(mapRef.current, {
           zoomControl: false,
           attributionControl: false,
+          minZoom: MAP_MIN_ZOOM,
+          maxZoom: MAP_MAX_ZOOM,
         }).setView([37.5, -77.6], 11);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -500,11 +512,12 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
     }
   };
 
-  // Change map theme
-  const handleThemeChange = (theme: MapTheme) => {
+  const changeTheme = (theme: MapTheme) => {
     setMapTheme(theme);
     updateSettings({ mapTheme: theme }).catch(console.error);
   };
+
+  const activeTheme = THEME_ITEMS.find((t) => t.id === mapTheme) ?? THEME_ITEMS[0];
 
   return (
     <div className={`relative w-full h-full map-theme-${mapTheme}`}>
@@ -569,32 +582,18 @@ export function LeadMap({ onPinClick, statusFilter, onStatusFilterChange }: Lead
 
       {/* Top Right Controls - Theme */}
       <div className="absolute top-2 right-2 flex flex-col gap-2 z-[1000]">
-        <div className="bg-dark-card/95 rounded-xl shadow-lg overflow-hidden flex">
-          <button
-            onClick={() => handleThemeChange('dark')}
-            className={`w-8 h-8 flex items-center justify-center transition-colors
-                      ${mapTheme === 'dark' ? 'bg-accent-cyan text-white' : 'text-white hover:bg-dark-hover'}`}
-            title="Dark theme"
-          >
-            🌙
-          </button>
-          <button
-            onClick={() => handleThemeChange('light')}
-            className={`w-8 h-8 flex items-center justify-center transition-colors
-                      ${mapTheme === 'light' ? 'bg-accent-cyan text-white' : 'text-white hover:bg-dark-hover'}`}
-            title="Light theme"
-          >
-            ☀️
-          </button>
-          <button
-            onClick={() => handleThemeChange('satellite')}
-            className={`w-8 h-8 flex items-center justify-center transition-colors
-                      ${mapTheme === 'satellite' ? 'bg-accent-cyan text-white' : 'text-white hover:bg-dark-hover'}`}
-            title="Satellite"
-          >
-            🛰️
-          </button>
-        </div>
+        <StaggeredDropdown
+          label={activeTheme.label}
+          triggerIcon={activeTheme.icon}
+          align="right"
+          activeId={mapTheme}
+          items={THEME_ITEMS.map((t) => ({
+            id: t.id,
+            label: t.label,
+            icon: t.icon,
+            onSelect: () => changeTheme(t.id),
+          }))}
+        />
       </div>
 
       {/* Drop Pin Mode Indicator */}
