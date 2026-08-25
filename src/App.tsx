@@ -1,4 +1,4 @@
-import React, { useState, useCallback, lazy, Suspense, useTransition } from 'react';
+import React, { useState, useCallback, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ToastProvider } from './hooks/useToast';
 import { Login } from './components/Login';
@@ -12,16 +12,7 @@ import { ToastContainer } from './components/Toast';
 import { SettingsProvider } from './hooks/useSettings';
 import { LeadsProvider } from './hooks/useLeads';
 import { YfmLogoMark } from './components/YfmLogo';
-import { ViewFallback } from './components/ui/ViewFallback';
-import {
-  ViewTransitionScreen,
-  useMinTransitionOverlay,
-  TABLE_LOAD_MIN_MS,
-} from './components/ui/ViewTransitionScreen';
-import {
-  getTransitionLabel,
-  type TransitionLabelProps,
-} from './components/ui/table-transition-label';
+import { ViewTransitionScreen } from './components/ui/ViewTransitionScreen';
 import { usingDevBackend } from './lib/supabase';
 import {
   MapPin,
@@ -71,14 +62,6 @@ function getContentKey(
   return activeTab;
 }
 
-function getSuspenseTransition(
-  activeTab: string,
-  leadsSubView: LeadsSubView,
-  teamSubView: TeamSubView
-): TransitionLabelProps {
-  return getTransitionLabel(getContentKey(activeTab, leadsSubView, teamSubView));
-}
-
 interface NavItem {
   id: string;
   label: string;
@@ -93,35 +76,15 @@ function AppContent() {
   const [leadsSubView, setLeadsSubView] = useState<LeadsSubView>('hub');
   const [teamSubView, setTeamSubView] = useState<TeamSubView>('hub');
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
-  const [isPending, startTransition] = useTransition();
-  const [transitionLabel, setTransitionLabel] = useState<TransitionLabelProps>({
-    label: 'Loading',
-  });
-  const [transitionMinMs, setTransitionMinMs] = useState(TABLE_LOAD_MIN_MS);
-  const showTransition = useMinTransitionOverlay(isPending, transitionMinMs);
-
-  const runTransition = useCallback((
-    transitionKey: string,
-    fn: () => void,
-    minMs: number = TABLE_LOAD_MIN_MS
-  ) => {
-    setTransitionLabel(getTransitionLabel(transitionKey));
-    setTransitionMinMs(minMs);
-    startTransition(fn);
-  }, []);
 
   const goToLeadsHub = () => {
-    runTransition('leads-hub', () => {
-      setActiveTab('leads');
-      setLeadsSubView('hub');
-    });
+    setActiveTab('leads');
+    setLeadsSubView('hub');
   };
 
   const goToTeamHub = () => {
-    runTransition('team-hub', () => {
-      setActiveTab('team');
-      setTeamSubView('hub');
-    });
+    setActiveTab('team');
+    setTeamSubView('hub');
   };
 
   const handleNavClick = (id: string) => {
@@ -140,19 +103,15 @@ function AppContent() {
       setActiveTab('map');
       return;
     }
-    runTransition(id, () => setActiveTab(id), 480);
+    setActiveTab(id);
   };
 
   const handleLeadsNavigate = (view: Exclude<LeadsSubView, 'hub'>) => {
-    runTransition(`leads-${view}`, () => {
-      setLeadsSubView(view);
-    });
+    setLeadsSubView(view);
   };
 
   const handleTeamNavigate = (view: Exclude<TeamSubView, 'hub'>) => {
-    runTransition(`team-${view}`, () => {
-      setTeamSubView(view);
-    });
+    setTeamSubView(view);
   };
 
   if (isLoading) {
@@ -178,8 +137,6 @@ function AppContent() {
     item.roles.includes(member?.role || '')
   );
 
-  const suspenseTransition = getSuspenseTransition(activeTab, leadsSubView, teamSubView);
-
   const renderContent = () => {
     switch (activeTab) {
       case 'map':
@@ -197,20 +154,16 @@ function AppContent() {
       case 'leads':
         if (leadsSubView === 'hub') {
           return (
-            <Suspense fallback={<ViewFallback {...suspenseTransition} />}>
+            <Suspense fallback={null}>
               <LeadsHub onNavigate={handleLeadsNavigate} />
             </Suspense>
           );
         }
         return (
           <div className="h-full flex flex-col overflow-hidden">
-            <LeadsSubViewBar
-              onBack={() =>
-                runTransition('leads-hub', () => setLeadsSubView('hub'))
-              }
-            />
+            <LeadsSubViewBar onBack={() => setLeadsSubView('hub')} />
             <div className="flex-1 overflow-hidden">
-              <Suspense fallback={<ViewFallback {...suspenseTransition} />}>
+              <Suspense fallback={null}>
                 {leadsSubView === 'list' && <MyLeads />}
                 {leadsSubView === 'find' && <FCCLeadLookup />}
                 {leadsSubView === 'import' && <Import />}
@@ -222,20 +175,16 @@ function AppContent() {
       case 'team':
         if (teamSubView === 'hub') {
           return (
-            <Suspense fallback={<ViewFallback {...suspenseTransition} />}>
+            <Suspense fallback={null}>
               <TeamHub onNavigate={handleTeamNavigate} />
             </Suspense>
           );
         }
         return (
           <div className="h-full flex flex-col overflow-hidden">
-            <TeamSubViewBar
-              onBack={() =>
-                runTransition('team-hub', () => setTeamSubView('hub'))
-              }
-            />
+            <TeamSubViewBar onBack={() => setTeamSubView('hub')} />
             <div className="flex-1 overflow-hidden">
-              <Suspense fallback={<ViewFallback {...suspenseTransition} />}>
+              <Suspense fallback={null}>
                 {teamSubView === 'members' && <Team section="members" />}
                 {teamSubView === 'commission' && <Team section="commission" />}
                 {teamSubView === 'stats' && <MyStats />}
@@ -307,19 +256,7 @@ function AppContent() {
           )}
 
           <div className="flex-1 relative overflow-hidden min-h-0">
-            {showTransition && (
-              <ViewTransitionScreen
-                {...transitionLabel}
-                className="absolute inset-0 z-30"
-                variant="table"
-              />
-            )}
-            <div
-              key={contentKey}
-              className={`h-full overflow-hidden ${
-                showTransition ? 'opacity-0 pointer-events-none' : ''
-              } ${contentKey.endsWith('-hub') ? '' : 'tab-content-enter'}`}
-            >
+            <div key={contentKey} className="h-full overflow-hidden">
               {renderContent()}
             </div>
           </div>

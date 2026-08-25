@@ -55,7 +55,8 @@ function BlockedActionButton({
   blockReason,
   faded = false,
 }: BlockedActionButtonProps) {
-  const dimmed = loading || faded || Boolean(blockReason);
+  const blocked = Boolean(blockReason);
+  const dimmed = loading || faded || blocked;
 
   return (
     <div className="relative flex-1 group cursor-default">
@@ -78,12 +79,24 @@ function BlockedActionButton({
         }}
         disabled={loading}
         aria-disabled={dimmed && !loading}
-        className={`w-full bg-accent-cyan text-white font-semibold py-3 rounded-xl
-                   flex items-center justify-center gap-2 transition-all cursor-default
-                   ${dimmed ? 'opacity-50' : 'hover:bg-accent-cyan/90 active:scale-[0.98]'}
+        className={`w-full font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-default
+                   ${
+                     blocked
+                       ? 'bg-dark-card border border-dark-border text-gray-500'
+                       : `bg-accent-cyan text-white ${
+                           dimmed ? 'opacity-50' : 'hover:bg-accent-cyan/90 active:scale-[0.98]'
+                         }`
+                   }
                    disabled:opacity-50`}
       >
-        {children}
+        {blocked && blockReason ? (
+          <>
+            {children}
+            <span className="text-xs font-normal text-amber-300/90">({blockReason})</span>
+          </>
+        ) : (
+          children
+        )}
       </button>
     </div>
   );
