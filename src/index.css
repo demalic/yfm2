@@ -87,6 +87,99 @@ body {
   background-color: var(--surface);
 }
 
+/* ── YWM-style CRM shell (icon rail + top bar + grid hubs) ─────────────── */
+
+.crm-shell {
+  background-color: var(--surface);
+}
+
+.crm-app-bar {
+  @apply flex items-center justify-between gap-4 px-4 md:px-6;
+  height: 4.5rem;
+  border-bottom: 1px solid var(--surface-border);
+  background-color: var(--surface);
+}
+
+.crm-app-bar-btn {
+  @apply inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors;
+  color: var(--content-muted);
+  border: 1px solid var(--surface-border);
+  background: var(--surface-raised);
+}
+
+.crm-app-bar-btn:hover {
+  color: var(--content-text);
+  border-color: color-mix(in srgb, var(--brand-orange) 35%, var(--surface-border));
+}
+
+.crm-icon-rail {
+  width: 4.5rem;
+  border-right: 1px solid var(--surface-border);
+  background: var(--surface);
+}
+
+.crm-rail-btn {
+  @apply flex items-center justify-center w-14 h-14 rounded-xl transition-colors;
+  color: var(--content-muted);
+}
+
+.crm-rail-btn:hover {
+  color: var(--content-text);
+  background: var(--inset-panel);
+}
+
+.crm-rail-btn-active {
+  color: var(--brand-orange);
+  background: color-mix(in srgb, var(--brand-orange) 18%, transparent);
+}
+
+.crm-main {
+  background: var(--surface);
+}
+
+.crm-content {
+  width: 100%;
+  max-width: min(100%, 72rem);
+  margin-inline: auto;
+  padding: clamp(12px, 1.5vw, 28px);
+}
+
+.crm-subview-bar {
+  @apply px-4 py-3 border-b border-surface-border;
+  background: var(--surface-raised);
+}
+
+.crm-summary-card {
+  @apply flex w-full flex-col gap-5 rounded-xl border p-6 shadow-panel;
+  background: var(--surface-raised);
+  border-color: var(--surface-border);
+  color: var(--content-text);
+}
+
+.crm-grid-card {
+  @apply rounded-xl border p-5 text-left transition-colors shadow-panel;
+  background: var(--surface-raised);
+  border-color: var(--surface-border);
+  color: var(--content-text);
+}
+
+.crm-grid-card:hover {
+  border-color: color-mix(in srgb, var(--brand-orange) 40%, var(--surface-border));
+  background: color-mix(in srgb, var(--surface-raised) 90%, var(--brand-orange) 10%);
+}
+
+.crm-icon-well {
+  @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl;
+  background: var(--inset-panel);
+  border: 1px solid var(--surface-border);
+  color: var(--content-muted);
+}
+
+.crm-grid-card:hover .crm-icon-well {
+  color: var(--brand-orange);
+  border-color: color-mix(in srgb, var(--brand-orange) 35%, var(--surface-border));
+}
+
 .hub-shell .page-header {
   background-color: var(--surface-raised);
   border-bottom-color: var(--surface-border);
@@ -1067,17 +1160,12 @@ input, textarea, select {
 @media (min-width: 768px) {
   .main-content {
     height: 100dvh;
-    margin-left: 240px;
+    margin-left: 0;
     overflow: hidden;
   }
 
   .sidebar {
-    width: 240px;
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 40;
+    display: none;
   }
 
   .bottom-nav {

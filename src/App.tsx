@@ -257,54 +257,47 @@ function AppContent() {
 
   return (
     <LeadsProvider>
-      <div className="h-screen w-full flex app-shell yfm-shell overflow-hidden fixed inset-0">
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:flex flex-col sidebar-panel w-[260px] shrink-0">
-          <div className="px-5 py-5 border-b border-surface-border bg-surface-raised">
-            <div className="flex flex-col gap-2">
-              <YfmLogoMark />
-              <p className="text-xs text-brand-orange capitalize font-semibold pl-0.5">
-                {member?.role}
-              </p>
-            </div>
+      <div className="h-screen w-full flex flex-col app-shell yfm-shell crm-shell overflow-hidden fixed inset-0">
+        <header className="crm-app-bar shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <YfmLogoMark className="h-8 shrink-0" />
+            <span className="hidden sm:inline text-sm font-semibold text-content-muted">YFM Digital</span>
           </div>
-
-          <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-            {filteredNav.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[0.625rem] transition-all duration-200
-                          ${isNavActive(item.id)
-                            ? 'nav-active'
-                            : 'text-content-muted hover:text-content hover:bg-inset-panel'
-                          }`}
-              >
-                {item.icon}
-                <span className="font-semibold text-sm">{item.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="p-4 border-t border-surface-border">
-            <div className="flex items-center justify-between glass-card rounded-xl px-3 py-3">
-              <div className="min-w-0">
-                <p className="text-white font-semibold text-sm truncate">{member?.name}</p>
-                <p className="text-xs text-gray-500 capitalize">{member?.role}</p>
-              </div>
-              <button
-                onClick={logout}
-                className="p-2 hover:bg-white/[0.06] rounded-xl transition-colors shrink-0"
-                title="Sign out"
-              >
-                <LogOut className="w-4 h-4 text-gray-400 hover:text-brand-orange" />
-              </button>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:block text-right">
+              <p className="text-sm font-semibold text-content leading-tight">{member?.name}</p>
+              <p className="text-xs text-brand-orange capitalize">{member?.role}</p>
             </div>
+            <button
+              type="button"
+              onClick={logout}
+              className="crm-app-bar-btn"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden md:inline">Sign out</span>
+            </button>
           </div>
-        </aside>
+        </header>
 
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        <div className="flex flex-1 min-h-0">
+          <aside className="crm-icon-rail hidden md:flex shrink-0">
+            <nav className="flex flex-col items-center gap-1 w-full px-2 py-3">
+              {filteredNav.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleNavClick(item.id)}
+                  title={item.label}
+                  className={`crm-rail-btn ${isNavActive(item.id) ? 'crm-rail-btn-active' : ''}`}
+                >
+                  {item.icon}
+                </button>
+              ))}
+            </nav>
+          </aside>
+
+          <main className="crm-main flex-1 flex flex-col min-w-0 min-h-0">
           {usingDevBackend && (
             <div className="shrink-0 px-3 py-1.5 bg-brand-orange/15 border-b border-brand-orange/30 text-center">
               <p className="text-xs text-brand-orange-bright font-semibold">
@@ -312,15 +305,6 @@ function AppContent() {
               </p>
             </div>
           )}
-          <header className="md:hidden h-14 px-4 bg-surface-raised border-b border-surface-border flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <YfmLogoMark className="h-7 shrink-0" />
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-white font-semibold">{member?.name}</p>
-              <p className="text-xs text-brand-orange capitalize font-medium">{member?.role}</p>
-            </div>
-          </header>
 
           <div className="flex-1 relative overflow-hidden min-h-0">
             {showTransition && (
@@ -359,6 +343,7 @@ function AppContent() {
             </div>
           </nav>
         </main>
+        </div>
       </div>
     </LeadsProvider>
   );

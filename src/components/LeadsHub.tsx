@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
-import { List, Search, Upload, ShieldCheck, ChevronRight } from 'lucide-react';
+import { List, Search, Upload, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { LEADS_TOOLS_NAME } from './ui/table-transition-label';
+import { PageHero } from './ui/PageHero';
+import { HubSummaryCard } from './ui/HubSummaryCard';
+import { HubGridCard } from './ui/HubGridCard';
 
 export type LeadsSubView = 'hub' | 'list' | 'find' | 'import' | 'eligibility';
 
@@ -9,6 +12,7 @@ interface LeadHubCard {
   id: Exclude<LeadsSubView, 'hub'>;
   title: string;
   description: string;
+  detail: string;
   icon: ReactNode;
   roles: string[];
 }
@@ -18,28 +22,32 @@ const LEAD_HUB_CARDS: LeadHubCard[] = [
     id: 'list',
     title: 'My Leads',
     description: 'View and manage your assigned leads',
-    icon: <List className="w-6 h-6" />,
+    detail: 'Assigned pipeline',
+    icon: <List className="w-5 h-5" strokeWidth={1.75} />,
     roles: ['admin', 'manager', 'rep'],
   },
   {
     id: 'find',
     title: 'Find',
     description: 'Search FCC fiber availability data',
-    icon: <Search className="w-6 h-6" />,
+    detail: 'FCC lookup',
+    icon: <Search className="w-5 h-5" strokeWidth={1.75} />,
     roles: ['admin'],
   },
   {
     id: 'import',
     title: 'Import',
     description: 'Upload lead lists and addresses',
-    icon: <Upload className="w-6 h-6" />,
+    detail: 'CSV upload',
+    icon: <Upload className="w-5 h-5" strokeWidth={1.75} />,
     roles: ['admin'],
   },
   {
     id: 'eligibility',
     title: 'Eligibility',
     description: 'Run zip checker and qualifier on the tower',
-    icon: <ShieldCheck className="w-6 h-6" />,
+    detail: 'Tower pipeline',
+    icon: <ShieldCheck className="w-5 h-5" strokeWidth={1.75} />,
     roles: ['admin'],
   },
 ];
@@ -53,34 +61,39 @@ export function LeadsHub({ onNavigate }: LeadsHubProps) {
   const role = member?.role ?? '';
 
   const cards = LEAD_HUB_CARDS.filter((card) => card.roles.includes(role));
+  const defaultTool = cards[0]?.id ?? 'list';
 
   return (
-    <div className="h-full hub-shell overflow-y-auto">
-      <div className="page-header shrink-0">
-        <h1 className="page-title">{LEADS_TOOLS_NAME}</h1>
-        <p className="page-subtitle">Choose a leads tool</p>
-      </div>
+    <div className="h-full overflow-y-auto">
+      <div className="crm-content space-y-8 py-2">
+        <PageHero
+          title={LEADS_TOOLS_NAME}
+          description="Choose a leads tool for your workflow"
+          footline={`${cards.length} tools · field sales pipeline`}
+          icon={List}
+          summary={
+            <HubSummaryCard
+              headline={`${cards.length} Tools`}
+              subline="My Leads · Find · Import · Eligibility"
+              featureIcon={List}
+              featureText="Open the most-used tool first"
+              actionLabel="Open My Leads"
+              onAction={() => onNavigate(defaultTool)}
+            />
+          }
+        />
 
-      <div className="p-4 max-w-2xl mx-auto w-full space-y-3">
-        {cards.map((card) => (
-          <button
-            key={card.id}
-            type="button"
-            onClick={() => onNavigate(card.id)}
-            className="hub-card w-full flex items-center gap-4 p-4 text-left group"
-          >
-            <div className="icon-well group-hover:border-brand-orange/40 group-hover:bg-brand-orange/10 transition-colors">
-              {card.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-content group-hover:text-brand-orange-bright transition-colors">
-                {card.title}
-              </p>
-              <p className="text-sm text-content-muted mt-0.5">{card.description}</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-content-muted group-hover:text-brand-orange shrink-0 transition-colors" />
-          </button>
-        ))}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {cards.map((card) => (
+            <HubGridCard
+              key={card.id}
+              title={card.title}
+              detail={card.detail}
+              icon={card.icon}
+              onClick={() => onNavigate(card.id)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -92,7 +105,7 @@ interface LeadsSubViewBarProps {
 
 export function LeadsSubViewBar({ onBack }: LeadsSubViewBarProps) {
   return (
-    <div className="shrink-0 page-header !py-3">
+    <div className="shrink-0 crm-subview-bar">
       <button
         type="button"
         onClick={onBack}
