@@ -67,7 +67,7 @@ function ActiveJobRow({
   return (
     <div
       className={`rounded-xl border transition-colors ${
-        selected ? 'border-accent-cyan/50 bg-accent-cyan/5' : 'border-dark-border bg-dark-bg/60'
+        selected ? 'border-brand-orange/50 bg-brand-orange/5' : 'border-surface-border bg-surface/60'
       }`}
     >
       <button
@@ -182,7 +182,7 @@ export function ActiveJobsPanel({
 
   return (
     <section className="px-4 pb-4">
-      <div className="bg-dark-card border border-dark-border rounded-2xl p-4 space-y-3">
+      <div className="bg-surface-raised border border-surface-border rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="font-semibold text-white text-sm">In progress</h2>

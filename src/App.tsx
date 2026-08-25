@@ -257,10 +257,10 @@ function AppContent() {
 
   return (
     <LeadsProvider>
-      <div className="h-screen w-full flex app-shell overflow-hidden fixed inset-0">
+      <div className="h-screen w-full flex app-shell yfm-shell overflow-hidden fixed inset-0">
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex flex-col sidebar-panel w-[260px] shrink-0">
-          <div className="px-5 py-5 border-b border-white/[0.06]">
+          <div className="px-5 py-5 border-b border-surface-border">
             <div className="flex flex-col gap-2">
               <YfmLogoMark />
               <p className="text-xs text-brand-orange capitalize font-semibold pl-0.5">
@@ -286,8 +286,8 @@ function AppContent() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-white/[0.06]">
-            <div className="flex items-center justify-between glass-card rounded-2xl px-3 py-3">
+          <div className="p-4 border-t border-surface-border">
+            <div className="flex items-center justify-between glass-card rounded-xl px-3 py-3">
               <div className="min-w-0">
                 <p className="text-white font-semibold text-sm truncate">{member?.name}</p>
                 <p className="text-xs text-gray-500 capitalize">{member?.role}</p>
@@ -312,7 +312,7 @@ function AppContent() {
               </p>
             </div>
           )}
-          <header className="md:hidden h-14 px-4 glass border-b border-white/[0.06] flex items-center justify-between shrink-0">
+          <header className="md:hidden h-14 px-4 glass border-b border-surface-border flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               <YfmLogoMark className="h-7 shrink-0" />
             </div>

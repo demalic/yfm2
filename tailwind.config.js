@@ -5,10 +5,26 @@ export default {
   theme: {
     extend: {
       colors: {
+        surface: {
+          DEFAULT: 'var(--surface)',
+          raised: 'var(--surface-raised)',
+          border: 'var(--surface-border)',
+        },
+        content: {
+          DEFAULT: 'var(--content-text)',
+          muted: 'var(--content-muted)',
+          subtle: 'var(--content-subtle)',
+        },
+        inset: {
+          panel: 'var(--inset-panel)',
+        },
+        logo: {
+          well: 'var(--logo-well)',
+        },
         dark: {
-          bg: '#000000',
-          card: '#0f0f0f',
-          border: '#1f1f1f',
+          bg: 'var(--surface)',
+          card: 'var(--surface-raised)',
+          border: 'var(--surface-border)',
           hover: '#171717',
           elevated: '#141414',
         },
@@ -20,28 +36,41 @@ export default {
         },
         muted: {
           DEFAULT: '#1a1a1a',
-          foreground: '#a3a3a3',
+          foreground: 'var(--content-muted)',
         },
         primary: {
-          DEFAULT: '#f89406',
-          foreground: '#ffffff',
+          DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+          foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
         },
         accent: {
-          cyan: '#f89406',
-          'cyan-dim': '#e07d00',
-          blue: '#fa9f1a',
-          purple: '#f89406',
+          cyan: 'var(--brand-orange)',
+          'cyan-dim': 'var(--brand-orange-dim)',
+          blue: 'var(--brand-orange-bright)',
+          purple: 'var(--brand-orange)',
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
+        },
+        border: 'hsl(var(--border) / <alpha-value>)',
+        ring: 'hsl(var(--ring) / <alpha-value>)',
+        card: {
+          DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+          foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
         },
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-        display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['Inter', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        card: '0.75rem',
+        panel: '1rem',
       },
       boxShadow: {
         glow: '0 0 28px rgba(248, 148, 6, 0.35)',
         'glow-sm': '0 0 14px rgba(248, 148, 6, 0.25)',
-        card: '0 8px 32px rgba(0, 0, 0, 0.65)',
-        'card-lg': '0 16px 48px rgba(0, 0, 0, 0.75)',
+        card: '0 4px 24px rgba(0, 0, 0, 0.45)',
+        'card-lg': '0 8px 32px rgba(0, 0, 0, 0.55)',
+        panel: '0 1px 0 rgba(255, 255, 255, 0.04) inset',
       },
       keyframes: {
         dialogPop: {

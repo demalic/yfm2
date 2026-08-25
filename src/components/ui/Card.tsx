@@ -9,11 +9,11 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantClasses: Record<CardVariant, string> = {
-  default: 'bg-dark-card border border-dark-border',
+  default: 'bg-surface-raised border border-surface-border shadow-panel',
   glass: 'glass-card',
-  elevated: 'bg-dark-elevated border border-white/[0.08] shadow-card',
+  elevated: 'bg-surface-raised border border-surface-border shadow-card',
   interactive:
-    'bg-dark-card border border-dark-border hover:border-brand-orange/30 hover:bg-dark-hover transition-colors cursor-pointer',
+    'bg-surface-raised border border-surface-border hover:border-brand-orange/35 hover:bg-dark-hover transition-colors cursor-pointer',
 };
 
 const paddingClasses = {
@@ -32,7 +32,7 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={cn('rounded-2xl', variantClasses[variant], paddingClasses[padding], className)}
+      className={cn('rounded-xl', variantClasses[variant], paddingClasses[padding], className)}
       {...props}
     >
       {children}

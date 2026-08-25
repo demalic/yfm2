@@ -1,0 +1,44 @@
+---
+description: YFM site design system — YWM CRM structure + YFM orange brand and logos
+globs: src/**/*.{tsx,css},tailwind.config.js,index.html
+alwaysApply: false
+---
+
+# YFM × YWM Combined Design System
+
+Blend **YWM CRM** layout polish with **YFM** brand identity. Reference: `maps-leads-crm/crm` (local).
+
+## Keep from YFM (never replace)
+- **Logos:** `src/assets/yfm-logo*` via `YfmLogo.tsx` — do not swap for YWM inline SVGs
+- **Primary accent:** orange `#f89406` (bright `#fa9f1a`, dim `#e07d00`) — not YWM blue
+- **Display font:** Plus Jakarta Sans for headings / logo areas
+- **Motion:** auth backdrops, view transitions, orange glow on CTAs
+
+## Take from YWM CRM
+- **CSS variable tokens:** `--surface`, `--surface-raised`, `--surface-border`, `--content-*`
+- **Card pattern:** `bg-surface-raised border border-surface-border rounded-xl`
+- **UI font:** Inter for body, forms, tables
+- **Shell class:** `.yfm-shell` with gray→token remapping (like `.crm-shell`)
+- **Inputs:** rounded-lg/xl, border-surface-border, focus ring primary orange
+- **Page density:** cleaner headers, less heavy glass on data views
+
+## Tokens (dark mode — default)
+| Token | Value |
+|-------|-------|
+| `--surface` | `#000000` |
+| `--surface-raised` | `#111111` |
+| `--surface-border` | `#262626` |
+| `--content-text` | `#fafafa` |
+| `--content-muted` | `#a3a3a3` |
+| `--primary` (HSL) | `36 95% 50%` → `#f89406` |
+
+## Tailwind usage
+- Prefer `bg-surface-raised`, `border-surface-border`, `text-content`, `text-content-muted`
+- Legacy `dark-*` and `brand-*` still work — map to same tokens
+- Buttons: primary = orange; secondary = raised surface + border
+- Cards: `rounded-xl` (CRM), not oversized `rounded-2xl` unless hero/marketing
+
+## Do not
+- Import MUI into YFM
+- Switch primary to YWM blue `#2563eb`
+- Remove orange animated backdrops from auth/splash flows

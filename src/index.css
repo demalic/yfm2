@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --surface: #000000;
+    --surface-raised: #111111;
+    --surface-border: #262626;
+    --content-text: #fafafa;
+    --content-muted: #a3a3a3;
+    --content-subtle: #d4d4d4;
+    --inset-panel: rgb(255 255 255 / 0.04);
+    --logo-well: #27272a;
+
+    --brand-orange: #f89406;
+    --brand-orange-bright: #fa9f1a;
+    --brand-orange-dim: #e07d00;
+
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 64%;
+    --border: 0 0% 15%;
+    --primary: 36 95% 50%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 36 95% 50%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 36 95% 50%;
+    --destructive: 0 84% 60%;
+    --input: 0 0% 15%;
+  }
+}
+
 /* Base styles - full screen mobile */
 html, body, #root {
   height: 100dvh;
@@ -15,17 +47,42 @@ html, body, #root {
 }
 
 body {
-  background-color: #000000;
-  color: white;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--surface);
+  color: var(--content-text);
+  font-family: Inter, 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
-/* ── YFM design system — black, orange, white ───────────────────────────── */
+.yfm-shell {
+  touch-action: manipulation;
+}
+
+.yfm-shell .text-gray-400,
+.yfm-shell .text-gray-500 {
+  color: var(--content-muted);
+}
+
+.yfm-shell .text-gray-300 {
+  color: var(--content-subtle);
+}
+
+.yfm-shell .border-dark-border {
+  border-color: var(--surface-border);
+}
+
+.yfm-shell .bg-dark-card {
+  background-color: var(--surface-raised);
+}
+
+.yfm-shell .bg-dark-bg {
+  background-color: var(--surface);
+}
+
+/* ── YFM × YWM design system — orange brand, CRM surfaces ───────────────── */
 
 .app-shell {
-  background-color: #000000;
+  background-color: var(--surface);
   background-image:
-    radial-gradient(ellipse 90% 55% at 50% -18%, rgba(248, 148, 6, 0.1), transparent);
+    radial-gradient(ellipse 90% 55% at 50% -18%, rgba(248, 148, 6, 0.08), transparent);
 }
 
 .login-screen,
@@ -378,21 +435,21 @@ body {
 }
 
 .glass-card {
-  background: rgba(15, 15, 15, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--tw-shadow, 0 4px 24px rgba(0, 0, 0, 0.45)), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .input-yfm {
-  @apply w-full bg-dark-bg/80 border border-dark-border rounded-2xl pl-12 pr-4 py-4
-         text-white placeholder-gray-500 focus:outline-none focus:border-brand-orange/70
-         focus:shadow-glow-sm text-base transition-all duration-200;
+  @apply w-full bg-surface-raised border border-surface-border rounded-xl pl-12 pr-4 py-3.5
+         text-content placeholder-content-muted focus:outline-none focus:border-brand-orange/70
+         focus:ring-2 focus:ring-brand-orange/20 text-base transition-all duration-200;
 }
 
 .btn-primary {
-  @apply w-full bg-brand-orange text-white font-bold py-4 rounded-2xl
+  @apply w-full bg-brand-orange text-white font-semibold py-3.5 rounded-xl
          hover:bg-brand-orange-bright active:scale-[0.98] transition-all duration-200
          disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100
          shadow-glow-sm hover:shadow-glow;
@@ -400,34 +457,40 @@ body {
 
 .btn-secondary {
   @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
-         bg-dark-elevated text-white border border-dark-border font-semibold text-sm
-         hover:bg-dark-hover hover:border-brand-orange/40 transition-all duration-200;
+         bg-surface-raised text-content border border-surface-border font-medium text-sm
+         hover:bg-dark-hover hover:border-brand-orange/35 transition-all duration-200;
+}
+
+.sidebar-panel {
+  background: var(--surface-raised);
+  border-right: 1px solid var(--surface-border);
+}
+
+.nav-active {
+  background: linear-gradient(90deg, rgba(248, 148, 6, 0.16) 0%, rgba(248, 148, 6, 0.03) 100%);
+  box-shadow: inset 3px 0 0 var(--brand-orange);
+}
+
+.page-header {
+  @apply px-4 py-3.5 border-b border-surface-border backdrop-blur-md;
+  background-color: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+}
+
+.page-title {
+  @apply text-lg font-bold text-content tracking-tight font-display;
+}
+
+.page-subtitle {
+  @apply text-sm text-content-muted mt-0.5 font-normal;
+}
+
+.card-yfm {
+  @apply bg-surface-raised border border-surface-border rounded-xl;
+  color: var(--content-text);
 }
 
 .logo-glow {
   filter: drop-shadow(0 0 32px rgba(248, 148, 6, 0.4));
-}
-
-.sidebar-panel {
-  background: linear-gradient(180deg, #0a0a0a 0%, #000000 100%);
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.nav-active {
-  background: linear-gradient(90deg, rgba(248, 148, 6, 0.18) 0%, rgba(248, 148, 6, 0.04) 100%);
-  box-shadow: inset 3px 0 0 #f89406;
-}
-
-.page-header {
-  @apply px-4 py-4 border-b border-dark-border/80 bg-dark-bg/60 backdrop-blur-md;
-}
-
-.page-title {
-  @apply text-xl font-extrabold text-white tracking-tight;
-}
-
-.page-subtitle {
-  @apply text-sm text-gray-400 mt-0.5 font-medium;
 }
 
 .text-brand-gradient {
