@@ -103,3 +103,7 @@ class PendingQualifierJob(BaseModel):
 
 class PendingQualifierListResponse(BaseModel):
     jobs: list[PendingQualifierJob]
+
+
+class ActiveJobsListResponse(BaseModel):
+    jobs: list[EligibilityJob]

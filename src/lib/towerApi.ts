@@ -1,4 +1,4 @@
-import type { EligibilityJob, JobLogsResponse, PendingQualifierJob, StartEligibilityJobRequest, TowerHealthResponse, TowerISPInfo } from '../types';
+import type { ActiveJobsListResponse, EligibilityJob, JobLogsResponse, PendingQualifierJob, StartEligibilityJobRequest, TowerHealthResponse, TowerISPInfo } from '../types';
 
 const TOWER_API_URL = import.meta.env.VITE_TOWER_API_URL?.replace(/\/$/, '') ?? '';
 const TOWER_API_KEY = import.meta.env.VITE_TOWER_API_KEY?.trim() ?? '';
@@ -13,8 +13,16 @@ export function towerHealthSupportsLoggedZipchecks(
   return (
     health.features?.pendingQualifier === true ||
     health.apiVersion === '1.1.0' ||
+    health.apiVersion === '1.2.0' ||
     Array.isArray(health.pendingJobs)
   );
+}
+
+export function towerHealthSupportsActiveJobs(
+  health: TowerHealthResponse | null | undefined
+): boolean {
+  if (!health?.ok) return false;
+  return health.features?.activeJobs === true || health.apiVersion === '1.2.0';
 }
 
 export function isTowerConfigured(): boolean {
@@ -115,6 +123,18 @@ export async function cancelEligibilityJob(jobId: string): Promise<void> {
 
 export async function retryQualifierJob(jobId: string): Promise<EligibilityJob> {
   return towerFetch(`/api/jobs/${jobId}/retry-qualifier`, { method: 'POST' });
+}
+
+export async function fetchActiveJobs(): Promise<EligibilityJob[]> {
+  try {
+    const data = await towerFetch<ActiveJobsListResponse>('/api/jobs/active');
+    return data.jobs ?? [];
+  } catch (err) {
+    if (err instanceof TowerApiError && err.status === 404) {
+      throw new TowerApiError(TOWER_OUTDATED_MESSAGE, err.status);
+    }
+    throw err;
+  }
 }
 
 export async function fetchPendingQualifierJobs(): Promise<PendingQualifierJob[]> {

@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 
 from config import API_KEY, BOT_DIR, CORS_ORIGINS, HOST, JOBS_DIR, PORT, QUALIFIER_SCRIPT, TOWER_PYTHON, ZIPCHECK_SCRIPT
 from job_manager import job_manager
-from models import EligibilityJob, ISPsResponse, JobLogsResponse, PendingQualifierListResponse, StartJobRequest, StartJobResponse, TowerISPInfo
+from models import EligibilityJob, ISPsResponse, JobLogsResponse, ActiveJobsListResponse, PendingQualifierListResponse, StartJobRequest, StartJobResponse, TowerISPInfo
 
 app = FastAPI(title="YFM Tower API", version="1.0.0")
 
@@ -29,9 +29,10 @@ def health() -> dict:
     pending_jobs = job_manager.list_pending_qualifier()
     return {
         "ok": True,
-        "apiVersion": "1.1.0",
+        "apiVersion": "1.2.0",
         "features": {
             "pendingQualifier": True,
+            "activeJobs": True,
         },
         "botDir": str(BOT_DIR),
         "jobsDir": str(JOBS_DIR),
@@ -72,6 +73,11 @@ def start_job(body: StartJobRequest, _: None = Depends(require_api_key)) -> Star
 @app.get("/api/jobs/pending-qualifier", response_model=PendingQualifierListResponse)
 def list_pending_qualifier(_: None = Depends(require_api_key)) -> PendingQualifierListResponse:
     return PendingQualifierListResponse(jobs=job_manager.list_pending_qualifier())
+
+
+@app.get("/api/jobs/active", response_model=ActiveJobsListResponse)
+def list_active_jobs(_: None = Depends(require_api_key)) -> ActiveJobsListResponse:
+    return ActiveJobsListResponse(jobs=job_manager.list_active_jobs())
 
 
 @app.get("/api/jobs/{job_id}", response_model=EligibilityJob)

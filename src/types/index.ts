@@ -167,6 +167,7 @@ export interface TowerHealthResponse {
   apiVersion?: string;
   features?: {
     pendingQualifier?: boolean;
+    activeJobs?: boolean;
   };
   botDir: string;
   jobsDir?: string;
@@ -197,4 +198,8 @@ export interface PendingQualifierJob {
   qualifierProgress: number;
   qualifierCurrent: number;
   createdAt: string;
+}
+
+export interface ActiveJobsListResponse {
+  jobs: EligibilityJob[];
 }

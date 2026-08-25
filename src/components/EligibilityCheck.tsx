@@ -16,6 +16,7 @@ import {
 import { US_STATES } from '../constants/usStates';
 import { getISP, ISP_REGISTRY } from '../constants/isps';
 import { getPersistedEligibilityJobId, useEligibilityJob } from '../hooks/useEligibilityJob';
+import { useActiveJobs } from '../hooks/useActiveJobs';
 import { useJobLogs } from '../hooks/useJobLogs';
 import { useTowerHealth } from '../hooks/useTowerHealth';
 import { useToast } from '../hooks/useToast';
@@ -28,6 +29,7 @@ import {
 } from '../lib/towerApi';
 import type { EligibilityJob, EligibilityCountKey, PendingQualifierJob, PhaseStatus, StartEligibilityJobRequest } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
+import { ActiveJobsPanel } from './ActiveJobsPanel';
 import { JobTerminal } from './JobTerminal';
 import { TowerStatusBadge } from './TowerStatusBadge';
 import { ProgressiveFluxLoader } from '@/components/ui/progressive-flux-loader';
@@ -198,6 +200,15 @@ export function EligibilityCheck() {
   const towerConfigured = isTowerConfigured();
   const { status: towerStatus, health: towerHealth, error: towerError, refresh: refreshTowerHealth } =
     useTowerHealth();
+  const {
+    jobs: activeJobs,
+    isLoading: isActiveJobsLoading,
+    error: activeJobsError,
+    supported: activeJobsSupported,
+  } = useActiveJobs({
+    enabled: towerConfigured && towerStatus === 'online',
+    health: towerHealth,
+  });
   const towerOnline = towerStatus === 'online';
   const towerReady = towerConfigured && towerOnline;
   const towerBlockReason = getTowerBlockReason(towerConfigured, towerOnline);
@@ -319,6 +330,23 @@ export function EligibilityCheck() {
     const pending = pendingJobs.find((entry) => entry.jobId === jobId);
     if (pending) {
       setZip(pending.zip);
+    }
+
+    resetLogs();
+    await loadJob(jobId);
+  };
+
+  const handleOpenActiveJob = async (jobId: string) => {
+    if (!towerOnline) return;
+
+    const active = activeJobs.find((entry) => entry.jobId === jobId);
+    setResumeJobId('');
+    if (active?.zip) {
+      setZip(active.zip);
+      setScope('zip');
+    } else if (active?.state) {
+      setSelectedState(active.state);
+      setScope('state');
     }
 
     resetLogs();
@@ -667,6 +695,16 @@ export function EligibilityCheck() {
           )}
         </div>
 
+        <ActiveJobsPanel
+          jobs={activeJobs}
+          isLoading={isActiveJobsLoading}
+          error={activeJobsError}
+          supported={activeJobsSupported}
+          towerOnline={towerOnline}
+          selectedJobId={job?.jobId ?? null}
+          onOpenJob={handleOpenActiveJob}
+        />
+
         {/* Pipeline progress */}
         {job && (
           <div className="p-4 space-y-6">
@@ -841,7 +879,7 @@ export function EligibilityCheck() {
         )}
 
         {/* Idle state */}
-        {!job && (
+        {!job && activeJobs.length === 0 && (
           <div className="px-4 py-8 text-center text-gray-500">
             {towerReady ? (
               <ShieldCheck className="w-12 h-12 mx-auto mb-3 text-green-500" />

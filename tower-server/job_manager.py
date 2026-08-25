@@ -106,6 +106,15 @@ class JobManager:
 
         return sorted(pending, key=lambda item: item.createdAt, reverse=True)
 
+    def list_active_jobs(self) -> list[EligibilityJob]:
+        with self._lock:
+            active = [
+                job.model_copy(deep=True)
+                for job in self._jobs.values()
+                if job.status in ("queued", "running")
+            ]
+        return sorted(active, key=lambda item: item.createdAt, reverse=True)
+
     def start_job(
         self,
         isp: str,
