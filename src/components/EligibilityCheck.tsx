@@ -386,7 +386,7 @@ export function EligibilityCheck() {
       : 'this run';
 
   return (
-    <div className="h-full flex flex-col bg-dark-bg">
+    <div className="h-full flex flex-col bg-surface">
       <ConfirmDialog
         open={retryMode !== null}
         title={retryMode === 'qualifier' ? 'Retry qualifier only?' : 'Run full pipeline again?'}
@@ -450,7 +450,7 @@ export function EligibilityCheck() {
 
       <div className="flex-1 overflow-y-auto">
         {/* Setup form */}
-        <div className="p-4 border-b border-dark-border space-y-4">
+        <div className="p-4 border-b border-surface-border space-y-4 bg-surface-raised">
           {/* ISP */}
           <div>
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">

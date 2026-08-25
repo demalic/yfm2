@@ -5,8 +5,8 @@
 @layer base {
   :root {
     --surface: #000000;
-    --surface-raised: #111111;
-    --surface-border: #262626;
+    --surface-raised: #121212;
+    --surface-border: #2a2a2a;
     --content-text: #fafafa;
     --content-muted: #a3a3a3;
     --content-subtle: #d4d4d4;
@@ -81,8 +81,35 @@ body {
 
 .app-shell {
   background-color: var(--surface);
-  background-image:
-    radial-gradient(ellipse 90% 55% at 50% -18%, rgba(248, 148, 6, 0.08), transparent);
+}
+
+.hub-shell {
+  background-color: var(--surface);
+}
+
+.hub-shell .page-header {
+  background-color: var(--surface-raised);
+  border-bottom-color: var(--surface-border);
+}
+
+.hub-card {
+  @apply bg-surface-raised border border-surface-border rounded-xl shadow-panel;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hub-card:hover {
+  border-color: color-mix(in srgb, var(--brand-orange) 35%, var(--surface-border));
+  background-color: color-mix(in srgb, var(--surface-raised) 88%, var(--brand-orange) 12%);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.icon-well {
+  @apply flex items-center justify-center shrink-0 rounded-xl;
+  width: 3rem;
+  height: 3rem;
+  background: var(--logo-well);
+  border: 1px solid var(--surface-border);
+  color: var(--brand-orange);
 }
 
 .login-screen,
@@ -462,22 +489,27 @@ body {
 }
 
 .sidebar-panel {
-  background: var(--surface-raised);
+  background: var(--surface);
   border-right: 1px solid var(--surface-border);
 }
 
+.sidebar-panel nav button {
+  border-radius: 0.625rem;
+}
+
 .nav-active {
-  background: linear-gradient(90deg, rgba(248, 148, 6, 0.16) 0%, rgba(248, 148, 6, 0.03) 100%);
+  background: color-mix(in srgb, var(--brand-orange) 14%, var(--surface-raised));
   box-shadow: inset 3px 0 0 var(--brand-orange);
+  color: var(--brand-orange-bright);
 }
 
 .page-header {
-  @apply px-4 py-3.5 border-b border-surface-border backdrop-blur-md;
-  background-color: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  @apply px-4 py-4 border-b border-surface-border;
+  background-color: var(--surface-raised);
 }
 
 .page-title {
-  @apply text-lg font-bold text-content tracking-tight font-display;
+  @apply text-xl font-bold text-content tracking-tight font-display;
 }
 
 .page-subtitle {

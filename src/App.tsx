@@ -260,7 +260,7 @@ function AppContent() {
       <div className="h-screen w-full flex app-shell yfm-shell overflow-hidden fixed inset-0">
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex flex-col sidebar-panel w-[260px] shrink-0">
-          <div className="px-5 py-5 border-b border-surface-border">
+          <div className="px-5 py-5 border-b border-surface-border bg-surface-raised">
             <div className="flex flex-col gap-2">
               <YfmLogoMark />
               <p className="text-xs text-brand-orange capitalize font-semibold pl-0.5">
@@ -274,10 +274,10 @@ function AppContent() {
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[0.625rem] transition-all duration-200
                           ${isNavActive(item.id)
-                            ? 'nav-active text-brand-orange-bright'
-                            : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                            ? 'nav-active'
+                            : 'text-content-muted hover:text-content hover:bg-inset-panel'
                           }`}
               >
                 {item.icon}
@@ -312,7 +312,7 @@ function AppContent() {
               </p>
             </div>
           )}
-          <header className="md:hidden h-14 px-4 glass border-b border-surface-border flex items-center justify-between shrink-0">
+          <header className="md:hidden h-14 px-4 bg-surface-raised border-b border-surface-border flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               <YfmLogoMark className="h-7 shrink-0" />
             </div>
@@ -340,7 +340,7 @@ function AppContent() {
             </div>
           </div>
 
-          <nav className="md:hidden glass border-t border-white/[0.06] px-2 py-2 shrink-0">
+          <nav className="md:hidden bg-surface-raised border-t border-surface-border px-2 py-2 shrink-0">
             <div className="bottom-nav-scroll flex gap-0.5">
               {filteredNav.map((item) => (
                 <button

@@ -7,9 +7,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { TableBackdrop } from './TableBackdrop';
 import { TEAM_TOOLS_NAME } from './ui/table-transition-label';
-import { Card } from './ui';
 
 export type TeamSubView = 'hub' | 'members' | 'commission' | 'stats' | 'territory';
 
@@ -63,45 +61,32 @@ export function TeamHub({ onNavigate }: TeamHubProps) {
   const cards = TEAM_HUB_CARDS.filter((card) => card.roles.includes(role));
 
   return (
-    <div className="h-full auth-screen relative overflow-hidden">
-      <TableBackdrop />
+    <div className="h-full hub-shell overflow-y-auto">
+      <div className="page-header shrink-0">
+        <h1 className="page-title">{TEAM_TOOLS_NAME}</h1>
+        <p className="page-subtitle">Choose a team tool</p>
+      </div>
 
-      <div className="relative z-10 h-full overflow-y-auto">
-        <div className="page-header shrink-0 border-dark-border/60 bg-dark-bg/40 backdrop-blur-md">
-          <h1 className="page-title">{TEAM_TOOLS_NAME}</h1>
-          <p className="page-subtitle">Choose a team tool</p>
-        </div>
-
-        <div className="p-4 max-w-lg mx-auto w-full space-y-3">
-          {cards.map((card) => (
-            <Card
-              key={card.id}
-              variant="interactive"
-              padding="md"
-              role="button"
-              tabIndex={0}
-              onClick={() => onNavigate(card.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onNavigate(card.id);
-                }
-              }}
-              className="flex items-center gap-4 group"
-            >
-              <div className="w-12 h-12 rounded-xl bg-brand-orange/15 border border-brand-orange/25 flex items-center justify-center text-brand-orange shrink-0">
-                {card.icon}
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="font-semibold text-white group-hover:text-brand-orange-bright transition-colors">
-                  {card.title}
-                </p>
-                <p className="text-sm text-gray-400 mt-0.5">{card.description}</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-brand-orange shrink-0 transition-colors" />
-            </Card>
-          ))}
-        </div>
+      <div className="p-4 max-w-2xl mx-auto w-full space-y-3">
+        {cards.map((card) => (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => onNavigate(card.id)}
+            className="hub-card w-full flex items-center gap-4 p-4 text-left group"
+          >
+            <div className="icon-well group-hover:border-brand-orange/40 group-hover:bg-brand-orange/10 transition-colors">
+              {card.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-content group-hover:text-brand-orange-bright transition-colors">
+                {card.title}
+              </p>
+              <p className="text-sm text-content-muted mt-0.5">{card.description}</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-content-muted group-hover:text-brand-orange shrink-0 transition-colors" />
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -113,7 +98,7 @@ interface TeamSubViewBarProps {
 
 export function TeamSubViewBar({ onBack }: TeamSubViewBarProps) {
   return (
-    <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-dark-border/80 bg-dark-bg/80 backdrop-blur-md">
+    <div className="shrink-0 page-header !py-3">
       <button
         type="button"
         onClick={onBack}
