@@ -157,7 +157,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="h-screen app-shell overflow-hidden">
+      <div className="h-dvh app-shell overflow-hidden">
         <ViewTransitionScreen label="Loading YFM" variant="opening" />
       </div>
     );
@@ -168,10 +168,10 @@ function AppContent() {
   }
 
   const navItems: NavItem[] = [
-    { id: 'map', label: 'Map', icon: <MapPin className="w-5 h-5" />, roles: ['admin', 'manager', 'rep'] },
-    { id: 'leads', label: 'Leads', icon: <List className="w-5 h-5" />, roles: ['admin', 'manager', 'rep'] },
-    { id: 'team', label: 'Team', icon: <Users className="w-5 h-5" />, roles: ['admin', 'manager', 'rep'] },
-    { id: 'settings', label: 'Settings', icon: <SettingsIcon className="w-5 h-5" />, roles: ['admin'] },
+    { id: 'map', label: 'Map', icon: <MapPin />, roles: ['admin', 'manager', 'rep'] },
+    { id: 'leads', label: 'Leads', icon: <List />, roles: ['admin', 'manager', 'rep'] },
+    { id: 'team', label: 'Team', icon: <Users />, roles: ['admin', 'manager', 'rep'] },
+    { id: 'settings', label: 'Settings', icon: <SettingsIcon />, roles: ['admin'] },
   ];
 
   const filteredNav = navItems.filter((item) =>
@@ -257,7 +257,7 @@ function AppContent() {
 
   return (
     <LeadsProvider>
-      <div className="h-screen w-full flex flex-col app-shell yfm-shell crm-shell overflow-hidden fixed inset-0">
+      <div className="h-dvh w-full flex flex-col app-shell yfm-shell crm-shell overflow-hidden">
         <header className="crm-app-bar shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <YfmLogoMark className="h-8 shrink-0" />
@@ -282,7 +282,7 @@ function AppContent() {
 
         <div className="flex flex-1 min-h-0">
           <aside className="crm-icon-rail hidden md:flex shrink-0">
-            <nav className="flex flex-col items-center gap-1 w-full px-2 py-3">
+            <nav className="flex flex-col items-center gap-2 w-full px-2 py-4">
               {filteredNav.map((item) => (
                 <button
                   key={item.id}
@@ -324,19 +324,19 @@ function AppContent() {
             </div>
           </div>
 
-          <nav className="md:hidden bg-surface-raised border-t border-surface-border px-2 py-2 shrink-0">
-            <div className="bottom-nav-scroll flex gap-0.5">
+          <nav className="md:hidden bg-surface-raised border-t border-surface-border px-2 py-2 shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <div className="bottom-nav-scroll flex gap-1 justify-around">
               {filteredNav.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all shrink-0 min-w-[52px]
+                  className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all shrink-0 min-w-[56px]
                             ${isNavActive(item.id)
                               ? 'text-brand-orange bg-brand-orange/12'
                               : 'text-gray-500'
                             }`}
                 >
-                  {item.icon}
+                  <span className="crm-mobile-nav-icon">{item.icon}</span>
                   <span className="text-[10px] font-semibold">{item.label}</span>
                 </button>
               ))}

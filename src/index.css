@@ -34,16 +34,18 @@
   }
 }
 
-/* Base styles - full screen mobile */
+/* Base — fill the device viewport and adapt to aspect ratio */
 html, body, #root {
-  height: 100dvh;
   width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  min-height: 100svh;
+  margin: 0;
   overflow: hidden;
   touch-action: manipulation;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  position: fixed;
 }
 
 body {
@@ -91,13 +93,19 @@ body {
 
 .crm-shell {
   background-color: var(--surface);
+  width: 100%;
+  height: 100dvh;
+  height: 100svh;
+  min-height: 0;
 }
 
 .crm-app-bar {
   @apply flex items-center justify-between gap-4 px-4 md:px-6;
-  height: 4.5rem;
+  height: clamp(3.5rem, 8vh, 4.5rem);
+  min-height: 3.5rem;
   border-bottom: 1px solid var(--surface-border);
   background-color: var(--surface);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .crm-app-bar-btn {
@@ -113,14 +121,22 @@ body {
 }
 
 .crm-icon-rail {
-  width: 4.5rem;
+  width: clamp(4.75rem, 11vw, 6.25rem);
   border-right: 1px solid var(--surface-border);
   background: var(--surface);
 }
 
 .crm-rail-btn {
-  @apply flex items-center justify-center w-14 h-14 rounded-xl transition-colors;
+  @apply flex items-center justify-center rounded-2xl transition-colors;
+  width: clamp(3.25rem, 8vw, 4.5rem);
+  height: clamp(3.25rem, 8vw, 4.5rem);
   color: var(--content-muted);
+}
+
+.crm-rail-btn svg {
+  width: clamp(1.5rem, 4vw, 2rem);
+  height: clamp(1.5rem, 4vw, 2rem);
+  stroke-width: 1.5;
 }
 
 .crm-rail-btn:hover {
@@ -133,15 +149,29 @@ body {
   background: color-mix(in srgb, var(--brand-orange) 18%, transparent);
 }
 
+.crm-mobile-nav-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  stroke-width: 1.75;
+}
+
 .crm-main {
   background: var(--surface);
+  min-width: 0;
+  min-height: 0;
 }
 
 .crm-content {
   width: 100%;
-  max-width: min(100%, 72rem);
+  max-width: min(100%, 80rem);
   margin-inline: auto;
-  padding: clamp(12px, 1.5vw, 28px);
+  padding: clamp(12px, 2vw, 28px);
+}
+
+@media (min-width: 1536px) {
+  .crm-content {
+    max-width: min(100%, 96rem);
+  }
 }
 
 .crm-subview-bar {
@@ -1151,8 +1181,12 @@ input, textarea, select {
 /* Mobile bottom nav safe area */
 @media (max-width: 767px) {
   .main-content {
-    height: calc(100dvh - 120px);
+    height: calc(100dvh - 120px - env(safe-area-inset-bottom, 0px));
     overflow: hidden;
+  }
+
+  .crm-shell .bottom-nav-scroll {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
