@@ -43,9 +43,8 @@ export function useJobLogs(jobId: string | null, active: boolean): UseJobLogsRes
     } catch (err) {
       const message = err instanceof TowerApiError ? err.message : 'Failed to load tower logs';
       setError(message);
-      stopPolling();
     }
-  }, [stopPolling]);
+  }, []);
 
   useEffect(() => {
     reset();

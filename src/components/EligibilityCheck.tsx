@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { US_STATES } from '../constants/usStates';
 import { getISP, ISP_REGISTRY } from '../constants/isps';
-import { useEligibilityJob } from '../hooks/useEligibilityJob';
+import { getPersistedEligibilityJobId, useEligibilityJob } from '../hooks/useEligibilityJob';
 import { useJobLogs } from '../hooks/useJobLogs';
 import { useTowerHealth } from '../hooks/useTowerHealth';
 import { useToast } from '../hooks/useToast';
@@ -223,6 +223,13 @@ export function EligibilityCheck() {
       setShowLoggedOfflineHint(false);
     }
   }, [towerOnline]);
+
+  useEffect(() => {
+    if (!towerOnline || job) return;
+    const savedJobId = getPersistedEligibilityJobId();
+    if (!savedJobId) return;
+    void loadJob(savedJobId);
+  }, [towerOnline, job, loadJob]);
 
   const handleLoggedOfflineInteract = () => {
     if (isRunning) return;

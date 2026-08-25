@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YFM2 — Tower Auto-Start (Step by Step)</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 12pt;
+      line-height: 1.55;
+      color: #202124;
+      max-width: 7in;
+      margin: 0 auto;
+      padding: 48px 56px 72px;
+      background: #fff;
+    }
+    h1 { font-size: 22pt; margin-bottom: 0.25em; color: #0d0f14; }
+    .subtitle { color: #5f6368; margin-bottom: 2em; }
+    h2 { font-size: 14pt; margin-top: 1.75em; border-bottom: 2px solid #06b6d4; padding-bottom: 0.25em; }
+    ol.steps { padding-left: 1.25em; }
+    ol.steps > li { margin-bottom: 1.25em; }
+    code, .path {
+      font-family: Consolas, "Courier New", monospace;
+      background: #f1f3f4;
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+      font-size: 10.5pt;
+    }
+    .box {
+      background: #f8f9fa;
+      border-left: 4px solid #06b6d4;
+      padding: 12px 16px;
+      margin: 12px 0;
+    }
+    .warn {
+      background: #fef7e0;
+      border-left: 4px solid #f9ab00;
+      padding: 12px 16px;
+      margin: 12px 0;
+    }
+    .ok {
+      background: #e6f4ea;
+      border-left: 4px solid #34a853;
+      padding: 12px 16px;
+      margin: 12px 0;
+    }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 11pt; }
+    th, td { border: 1px solid #dadce0; padding: 8px 10px; text-align: left; }
+    th { background: #f1f3f4; }
+  </style>
+</head>
+<body>
+
+  <h1>YFM2 Tower — Auto-Start</h1>
+  <p class="subtitle">Step-by-step on the <strong>tower PC</strong>. Do this once; after that the tower starts when you log in.</p>
+
+  <div class="box">
+    <strong>What this gives you:</strong> After you log into Windows, ~90 seconds later two windows open by themselves —
+    <em>YFM Tower API</em> and <em>Tailscale Funnel</em>. You do not double-click anything each day.
+  </div>
+
+  <h2>Before you start — you need</h2>
+  <table>
+    <tr><th>Item</th><th>Where</th></tr>
+    <tr><td>Google Drive synced</td><td><code>G:\My Drive\tower-server\</code> and <code>G:\My Drive\bot\</code></td></tr>
+    <tr><td>Python + bot packages</td><td>Already working if zipcheck ran before</td></tr>
+    <tr><td>Tailscale</td><td>Installed and signed in on tower PC</td></tr>
+    <tr><td>These files in tower-server folder</td><td><code>install-autostart.bat</code>, <code>start-tower-live-auto.bat</code>, <code>start.bat</code>, <code>main.py</code></td></tr>
+  </table>
+
+  <h2>Step 1 — Get the new files onto the tower</h2>
+  <p>On your <strong>dev PC</strong> (Cursor laptop), copy these into Google Drive:</p>
+  <p class="path">From: C:\Users\demalicperkins\yfm2\tower-server\</p>
+  <p>Copy these files → <code>G:\My Drive\tower-server\</code></p>
+  <ul>
+    <li><code>install-autostart.bat</code></li>
+    <li><code>start-tower-live-auto.bat</code></li>
+    <li><code>uninstall-autostart.bat</code></li>
+    <li><code>start-tower-live.bat</code> (optional — for manual start)</li>
+  </ul>
+  <p>Wait for Drive to sync to the tower (or copy via USB if Drive is slow).</p>
+
+  <h2>Step 2 — Install auto-start (one time only)</h2>
+  <ol class="steps">
+    <li>On the <strong>tower PC</strong>, open File Explorer.</li>
+    <li>Go to <code>G:\My Drive\tower-server</code></li>
+    <li>Find <code>install-autostart.bat</code></li>
+    <li><strong>Double-click</strong> it.</li>
+    <li>If you see <strong>FAILED</strong>, right-click the file → <strong>Run as administrator</strong> → try again.</li>
+    <li>When you see <strong>SUCCESS</strong>, press a key to close the window.</li>
+  </ol>
+
+  <h2>Step 3 — Test it</h2>
+  <ol class="steps">
+    <li>Sign out of Windows on the tower, or restart the PC.</li>
+    <li>Log back in.</li>
+    <li>Wait about <strong>90 seconds</strong> (Google Drive needs time to connect).</li>
+    <li>You should see two cmd windows:
+      <ul>
+        <li><strong>YFM Tower API</strong> — running <code>python main.py</code></li>
+        <li><strong>Tailscale Funnel</strong> — showing an <code>https://…</code> URL</li>
+      </ul>
+    </li>
+    <li>Leave both windows <strong>open</strong> all day while you use the site.</li>
+  </ol>
+
+  <h2>Step 4 — Check the tower is healthy</h2>
+  <ol class="steps">
+    <li>On the tower, open a browser.</li>
+    <li>Go to: <code>http://localhost:8787/health</code></li>
+    <li>You should see JSON with <code>"ok": true</code> and <code>"apiVersion": "1.1.0"</code>.</li>
+  </ol>
+  <div class="ok">
+    If that works, the tower software is running. Copy the <strong>https</strong> URL from the Tailscale window into Vercel as <code>VITE_TOWER_API_URL</code> (only when the URL changes).
+  </div>
+
+  <h2>Step 5 — Use the website</h2>
+  <ol class="steps">
+    <li>Open <code>https://yfm2-theta.vercel.app</code></li>
+    <li>Go to <strong>Eligibility</strong></li>
+    <li>Top right should say <strong>Tower online</strong> (green)</li>
+    <li>For ZIP 24153: use <strong>Logged</strong> dropdown → pick 24153 → <strong>Run Qualifier</strong></li>
+  </ol>
+
+  <h2>Every day after setup</h2>
+  <table>
+    <tr><th>You do</th><th>Windows does</th></tr>
+    <tr><td>Turn on tower PC and log in</td><td>Starts API + funnel after ~90 sec</td></tr>
+    <tr><td>Keep the two cmd windows open</td><td>—</td></tr>
+    <tr><td>Use the website</td><td>—</td></tr>
+  </table>
+
+  <h2>If something goes wrong</h2>
+  <table>
+    <tr><th>Problem</th><th>Fix</th></tr>
+    <tr><td>No windows after login</td><td>Run <code>start-tower-live.bat</code> manually once. Re-run <code>install-autostart.bat</code>.</td></tr>
+    <tr><td><code>G:\My Drive</code> not found at login</td><td>Open Google Drive app first; wait 2 min; run <code>start-tower-live.bat</code> manually.</td></tr>
+    <tr><td>Site says tower offline</td><td>Both cmd windows open? Check <code>localhost:8787/health</code>.</td></tr>
+    <tr><td>Site says API outdated</td><td>Sync latest <code>tower-server</code> files to Drive; close API window; log out/in or run <code>start-tower-live.bat</code>.</td></tr>
+    <tr><td>Want to remove auto-start</td><td>Double-click <code>uninstall-autostart.bat</code></td></tr>
+  </table>
+
+  <div class="warn">
+    <strong>Important:</strong> The tower PC must stay <strong>on</strong> and <strong>logged in</strong> (not asleep at login screen) for jobs to run. Auto-start does not wake a shut-down PC.
+  </div>
+
+  <h2>Manual start (backup — no auto-start)</h2>
+  <p>If you prefer to start by hand, double-click once per session:</p>
+  <p class="path">G:\My Drive\tower-server\start-tower-live.bat</p>
+  <p>Or open two cmd windows:</p>
+  <p><code>cd /d "G:\My Drive\tower-server"</code> then <code>python main.py</code></p>
+  <p><code>tailscale funnel 8787</code></p>
+
+  <p style="margin-top: 3em; color: #5f6368; font-size: 10pt;">YFM2 Tower Auto-Start Guide · Files live in <code>yfm2/tower-server/</code> on GitHub</p>
+
+</body>
+</html>

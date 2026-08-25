@@ -10,6 +10,19 @@ import {
 } from '../lib/towerApi';
 
 const POLL_INTERVAL_MS = 2000;
+const ACTIVE_JOB_STORAGE_KEY = 'yfm_active_eligibility_job';
+
+function persistActiveJobId(jobId: string | null) {
+  if (jobId) {
+    sessionStorage.setItem(ACTIVE_JOB_STORAGE_KEY, jobId);
+  } else {
+    sessionStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
+  }
+}
+
+export function getPersistedEligibilityJobId(): string | null {
+  return sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY);
+}
 
 interface UseEligibilityJobResult {
   job: EligibilityJob | null;
@@ -42,6 +55,7 @@ export function useEligibilityJob(): UseEligibilityJobResult {
     try {
       const updated = await fetchEligibilityJob(jobId);
       setJob(updated);
+      persistActiveJobId(jobId);
       setError(null);
 
       if (updated.status === 'completed' || updated.status === 'failed' || updated.status === 'cancelled') {
@@ -50,9 +64,8 @@ export function useEligibilityJob(): UseEligibilityJobResult {
     } catch (err) {
       const message = err instanceof TowerApiError ? err.message : 'Failed to reach tower';
       setError(message);
-      stopPolling();
     }
-  }, [stopPolling]);
+  }, []);
 
   const startPolling = useCallback((jobId: string) => {
     stopPolling();
@@ -76,6 +89,7 @@ export function useEligibilityJob(): UseEligibilityJobResult {
         request.state ?? null
       );
       setJob(placeholder);
+      persistActiveJobId(jobId);
       startPolling(jobId);
     } catch (err) {
       const message = err instanceof TowerApiError ? err.message : 'Failed to start job';
@@ -94,6 +108,7 @@ export function useEligibilityJob(): UseEligibilityJobResult {
     try {
       const updated = await retryQualifierJob(job.jobId);
       setJob(updated);
+      persistActiveJobId(job.jobId);
       startPolling(job.jobId);
     } catch (err) {
       const message = err instanceof TowerApiError ? err.message : 'Failed to retry qualifier';
@@ -111,6 +126,7 @@ export function useEligibilityJob(): UseEligibilityJobResult {
     try {
       const loaded = await fetchEligibilityJob(jobId);
       setJob(loaded);
+      persistActiveJobId(jobId);
       if (loaded.status === 'running' || loaded.status === 'queued') {
         startPolling(jobId);
       }
@@ -137,6 +153,7 @@ export function useEligibilityJob(): UseEligibilityJobResult {
 
   const reset = useCallback(() => {
     stopPolling();
+    persistActiveJobId(null);
     setJob(null);
     setError(null);
   }, [stopPolling]);
